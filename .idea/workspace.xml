@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="cd3059c2-67cd-45e4-afb3-21beecb5fc47" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/Main.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/MirrorApplication.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/capture/SeleniumCaptureService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/capture/WebCaptureService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/figma/FigmaService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/figma/FigmaServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/image/ImageAligner.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/image/OpenCvDiffEngine.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/image/VisualDiffEngine.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/model/DiffRegion.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/model/DiffResult.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/orchestrator/CompareController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/orchestrator/ComparisonOrchestrator.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/report/CsvReportService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/report/ReportService.java" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="package-info" />
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="38APATUSaBNNtT33XucKRjdb0mM" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true"
+  }
+}]]></component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="cd3059c2-67cd-45e4-afb3-21beecb5fc47" name="Changes" comment="" />
+      <created>1768239261233</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1768239261233</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
