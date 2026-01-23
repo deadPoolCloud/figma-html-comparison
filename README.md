@@ -89,6 +89,20 @@ curl -X POST "http://localhost:8080/api/compare" \
   -d "viewport=DESKTOP"
 ```
 
+In Powershell
+
+First run the jar with **java -jar target\figma-html-visual-mirror-1.0.0.jar**
+then in another tab
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/compare" `
+>>     -Method POST `
+>>     -Body @{
+>>         url = ""
+>>         figmaFile = ""
+>>         figmaFrame = "68:108"
+>>         viewport = "DESKTOP"
+>>     }
+
 ## 📖 Usage Guide for QA Testers
 
 ### Understanding Figma File and Node IDs
@@ -282,22 +296,22 @@ stage('Visual Regression Test') {
 ### Programmatic Usage
 
 ```java
-import com.mirror.model.Viewport;
-import com.mirror.model.DiffResult;
-import com.mirror.orchestrator.ComparisonOrchestrator;
-
-ComparisonOrchestrator orchestrator = new ComparisonOrchestrator();
-
-DiffResult result = orchestrator.compare(
-    "https://myapp.com/page",
-    "figma_file_id",
-    "figma_node_id",
-    Viewport.DESKTOP
-);
-
-System.out.println("Mismatch: " + result.getMismatchPercent() + "%");
-System.out.println("Severity: " + result.getSeverity());
-System.out.println("Issues: " + result.getRegions().size());
+//import com.mirror.model.Viewport;
+//import com.mirror.model.DiffResult;
+//import com.mirror.orchestrator.ComparisonOrchestrator;
+//
+//ComparisonOrchestrator orchestrator = new ComparisonOrchestrator();
+//
+//DiffResult result = orchestrator.compare(
+//    "https://myapp.com/page",
+//    "figma_file_id",
+//    "figma_node_id",
+//    Viewport.DESKTOP
+//);
+//
+//System.out.println("Mismatch: " + result.getMismatchPercent() + "%");
+//System.out.println("Severity: " + result.getSeverity());
+//System.out.println("Issues: " + result.getRegions().size());
 ```
 
 ## 🐛 Troubleshooting
