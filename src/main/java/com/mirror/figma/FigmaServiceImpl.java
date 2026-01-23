@@ -5,69 +5,85 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.InputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class FigmaServiceImpl implements FigmaService {
 
-    // Get Figma token from environment variable or use default
-    // Set FIGMA_TOKEN environment variable: export FIGMA_TOKEN=your_token_here
-    private static final String FIGMA_TOKEN = System.getenv("FIGMA_TOKEN") != null ?
-            System.getenv("FIGMA_TOKEN") : "YOUR_FIGMA_TOKEN";
+    private static final String FIGMA_TOKEN =
+            System.getenv("FIGMA_TOKEN") != null
+                    ? System.getenv("FIGMA_TOKEN")
+                    : "YOUR_FIGMA_TOKEN";
+
+    private static final Path CACHE_DIR = Path.of("cache", "figma");
 
     @Override
     public BufferedImage getFrame(String fileKey, String frameId) {
 
-        if (FIGMA_TOKEN.equals("YOUR_FIGMA_TOKEN")) {
-            throw new RuntimeException(
-                    "Figma token not configured! " +
-                            "Please set FIGMA_TOKEN environment variable or update FigmaServiceImpl.java"
-            );
+        if ("YOUR_FIGMA_TOKEN".equals(FIGMA_TOKEN)) {
+            throw new RuntimeException("FIGMA_TOKEN not configured");
         }
 
         try {
-            System.out.println("=== FIGMA DESIGN FETCH ===");
-            System.out.println("File Key: " + fileKey);
-            System.out.println("Frame ID: " + frameId);
+            // ---------------- CACHE ----------------
+            Path cachedImage = CACHE_DIR
+                    .resolve(fileKey)
+                    .resolve(frameId + ".png");
 
-            // Step 1: Get image URL from Figma
+            if (Files.exists(cachedImage)) {
+                System.out.println("Figma cache hit: " + cachedImage);
+                return ImageIO.read(cachedImage.toFile());
+            }
+
+            Files.createDirectories(cachedImage.getParent());
+
+            // ---------------- API CALL ----------------
             String apiUrl = "https://api.figma.com/v1/images/" + fileKey +
                     "?ids=" + frameId + "&format=png";
 
             HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();
-            conn.setRequestProperty("X-Figma-Token", FIGMA_TOKEN);
             conn.setRequestMethod("GET");
+            conn.setRequestProperty("X-Figma-Token", FIGMA_TOKEN);
+            conn.setConnectTimeout(10_000);
+            conn.setReadTimeout(10_000);
+
+            int status = conn.getResponseCode();
+
+            // --------- RATE LIMIT HANDLING ---------
+            if (status == 429) {
+                String retryAfter = conn.getHeaderField("Retry-After");
+                int waitSeconds = retryAfter != null ? Integer.parseInt(retryAfter) : 60;
+
+                throw new RuntimeException(
+                        "Figma rate limit hit. Retry after " + waitSeconds + " seconds."
+                );
+            }
+
+            if (status != 200) {
+                throw new RuntimeException("Figma API failed: HTTP " + status);
+            }
 
             ObjectMapper mapper = new ObjectMapper();
             JsonNode json = mapper.readTree(conn.getInputStream());
 
             String imageUrl = json.get("images").get(frameId).asText();
 
-            System.out.println("Figma API responded, downloading image...");
-
-            // Step 2: Download the PNG
-            InputStream imgStream = new URL(imageUrl).openStream();
-            BufferedImage image = ImageIO.read(imgStream);
-
-            System.out.println("Figma design fetched: " + image.getWidth() + " x " + image.getHeight());
-
-            // Save debug image
-            try {
-                File debugDir = new File("debug_images");
-                debugDir.mkdirs();
-                ImageIO.write(image, "png", new File("debug_images/figma_design.png"));
-                System.out.println("Debug: Figma design saved to debug_images/figma_design.png");
-            } catch (Exception e) {
-                System.err.println("Warning: Failed to save debug Figma image: " + e.getMessage());
+            // ---------------- IMAGE DOWNLOAD ----------------
+            BufferedImage image;
+            try (InputStream imgStream = new URL(imageUrl).openStream()) {
+                image = ImageIO.read(imgStream);
             }
 
-            System.out.println("==========================");
+            // ---------------- SAVE CACHE ----------------
+            ImageIO.write(image, "png", cachedImage.toFile());
+            System.out.println("Figma image cached: " + cachedImage);
 
             return image;
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new RuntimeException("Failed to fetch Figma frame", e);
         }
     }

@@ -75,6 +75,15 @@ java -cp target/figma-html-visual-mirror-1.0.0.jar com.mirror.cli.VisualComparis
     "DESKTOP"
 ```
 
+Invoke-RestMethod -Uri "http://localhost:8080/api/compare" `
+     -Method POST `
+     -Body @{
+         url = "https://zolanah-new-weavers.webflow.io/"
+         figmaFile = "kaDcp2VTNV8RL0G58l3bwO"
+         figmaFrame = "68:108"
+         viewport = "DESKTOP"
+     }
+
 **Option C: REST API (Spring Boot)**
 ```bash
 mvn spring-boot:run
@@ -241,6 +250,57 @@ figma-html-visual-mirror/
 ├── pom.xml                                # Maven dependencies
 └── README.md                              # This file
 ```
+
+Currently
+Web Screenshot - ✅ Captured EVERY TIME you run the comparison
+
+Selenium opens Chrome headless
+Captures fresh screenshot of https://zolanah-new-weavers.webflow.io
+Saves to debug_images/web_screenshot.png
+
+
+Figma Frame - ✅ Using LOCAL FILE (not calling API)
+
+Uses figma_frame.png (the file you downloaded earlier)
+This avoids the 429 rate limit error
+Temporary workaround using FigmaServiceMock
+
+
+
+Current Flow:
+Run Comparison
+↓
+1. Capture LIVE website (new screenshot each time)
+   ↓
+2. Load LOCAL Figma image (figma_frame.png)
+   ↓
+3. Align both images
+   ↓
+4. Compare pixel-by-pixel
+   ↓
+5. Generate HTML report
+   Why This Works:
+
+Web page changes? ✅ You get the latest version
+Figma design changes? ❌ You're using the old downloaded image
+Avoid rate limits? ✅ No API calls to Figma
+
+When You Need to Update Figma Design:
+When the Figma API rate limit resets (later today/tomorrow), you can:
+
+Switch back to real API:
+
+java   // In ComparisonOrchestrator.java, change:
+private final FigmaService figmaService = new FigmaServiceMock();
+// Back to:
+private final FigmaService figmaService = new FigmaServiceImpl();
+
+Or download new Figma image manually:
+
+powershell   # Download fresh Figma frame
+$headers = @{ "X-Figma-Token" = "YOUR_TOKEN" }
+$exportData = Invoke-RestMethod -Uri "https://api.figma.com/v1/images/kaDcp2VTNV8RL0G58l3bwO?ids=68:108&format=png&scale=1" -Headers $headers
+Invoke-WebRequest -Uri $exportData.images.'68:108' -OutFile "figma_frame.png"
 
 ## 🔧 Advanced Usage
 

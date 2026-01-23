@@ -4,28 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cd3059c2-67cd-45e4-afb3-21beecb5fc47" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/Main.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/MirrorApplication.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/capture/SeleniumCaptureService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/capture/WebCaptureService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/figma/FigmaService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/figma/FigmaServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/image/ImageAligner.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/image/OpenCvDiffEngine.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/image/VisualDiffEngine.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/model/DiffRegion.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/model/DiffResult.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/orchestrator/CompareController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/orchestrator/ComparisonOrchestrator.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/report/CsvReportService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/report/ReportService.java" afterDir="false" />
+    <list default="true" id="cd3059c2-67cd-45e4-afb3-21beecb5fc47" name="Changes" comment="updated imageAligner">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/mirror/figma/FigmaServiceMock.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug_images/web_screenshot.png" beforeDir="false" afterPath="$PROJECT_DIR$/debug_images/web_screenshot.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/mirror/capture/SeleniumCaptureService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/mirror/capture/SeleniumCaptureService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/mirror/figma/FigmaServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/mirror/figma/FigmaServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/mirror/orchestrator/ComparisonOrchestrator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/mirror/orchestrator/ComparisonOrchestrator.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -52,13 +38,13 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">

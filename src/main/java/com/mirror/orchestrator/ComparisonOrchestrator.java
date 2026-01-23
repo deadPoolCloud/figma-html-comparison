@@ -3,7 +3,7 @@ package com.mirror.orchestrator;
 import com.mirror.capture.SeleniumCaptureService;
 import com.mirror.capture.WebCaptureService;
 import com.mirror.figma.FigmaService;
-import com.mirror.figma.FigmaServiceImpl;
+import com.mirror.figma.FigmaServiceMock;
 import com.mirror.image.ImageAligner;
 import com.mirror.image.OpenCvDiffEngine;
 import com.mirror.image.VisualDiffEngine;
@@ -20,7 +20,7 @@ import java.awt.image.BufferedImage;
 public class ComparisonOrchestrator {
 
     private final WebCaptureService webCapture = new SeleniumCaptureService();
-    private final FigmaService figmaService = new FigmaServiceImpl();
+    private final FigmaService figmaService = new FigmaServiceMock(); // CHANGED: Using mock to avoid API rate limit
     private final VisualDiffEngine diffEngine = new OpenCvDiffEngine();
     private final ReportService reportService = new HtmlReportService(); // Use HTML report
 
