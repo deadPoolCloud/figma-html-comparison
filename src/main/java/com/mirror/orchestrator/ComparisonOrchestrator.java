@@ -8,11 +8,18 @@ import com.mirror.image.ImageAligner;
 import com.mirror.image.OpenCvDiffEngine;
 import com.mirror.image.VisualDiffEngine;
 import com.mirror.model.DiffResult;
+import com.mirror.model.SemanticComparisonResult;
 import com.mirror.model.Viewport;
 import com.mirror.report.HtmlReportService;
 import com.mirror.report.ReportService;
+import com.mirror.semantic.FigmaSemanticExtractor;
+import com.mirror.semantic.FigmaSemanticSnapshot;
+import com.mirror.semantic.HtmlSemanticExtractor;
+import com.mirror.semantic.HtmlSemanticSnapshot;
+import com.mirror.semantic.SemanticAnalyzer;
 
 import java.awt.image.BufferedImage;
+import java.io.File;
 
 /**
  * Orchestrates the entire visual comparison workflow
@@ -23,6 +30,9 @@ public class ComparisonOrchestrator {
     private final FigmaService figmaService = new FigmaServiceMock(); // CHANGED: Using mock to avoid API rate limit
     private final VisualDiffEngine diffEngine = new OpenCvDiffEngine();
     private final ReportService reportService = new HtmlReportService(); // Use HTML report
+    private final HtmlSemanticExtractor htmlSemanticExtractor = new HtmlSemanticExtractor();
+    private final FigmaSemanticExtractor figmaSemanticExtractor = new FigmaSemanticExtractor();
+    private final SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
 
     /**
      * Compares Figma design with live HTML page
@@ -79,5 +89,36 @@ public class ComparisonOrchestrator {
         System.out.println("Observations: " + result.getObservations().size());
 
         return result;
+    }
+
+    /**
+     * Performs semantic (non pixel-based) comparison and returns a JSON-ready
+     * semantic result, while still generating the legacy pixel/HTML report for debugging.
+     */
+    public SemanticComparisonResult compareSemantic(String url, String figmaFile, String figmaFrame, Viewport viewport) {
+        // Preserve existing behaviour: still run pixel comparison and HTML report
+        compare(url, figmaFile, figmaFrame, viewport);
+
+        System.out.println("\nStarting semantic comparison (layout, typography, spacing)...");
+
+        // 1. Capture semantic HTML snapshot
+        HtmlSemanticSnapshot htmlSnapshot = htmlSemanticExtractor.capture(url, viewport);
+
+        // 2. Load semantic Figma snapshot from local figma_structure.json
+        File figmaStructure = new File("figma_structure.json");
+        if (!figmaStructure.exists()) {
+            throw new RuntimeException("figma_structure.json not found in project root. " +
+                    "Export Figma structure JSON to enable semantic comparison.");
+        }
+        FigmaSemanticSnapshot figmaSnapshot = figmaSemanticExtractor.loadFromFile(figmaStructure);
+
+        // 3. Analyze semantically
+        SemanticComparisonResult semanticResult = semanticAnalyzer.analyze(figmaSnapshot, htmlSnapshot);
+
+        System.out.println("Semantic comparison complete.");
+        System.out.println("Total semantic issues: " + semanticResult.getSummary().getTotalIssues());
+        System.out.println("Semantic severity: " + semanticResult.getSummary().getSeverity());
+
+        return semanticResult;
     }
 }

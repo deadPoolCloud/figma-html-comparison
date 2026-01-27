@@ -4,7 +4,7 @@ package com.mirror.model;
  * Viewport configurations for responsive testing
  */
 public enum Viewport {
-    DESKTOP("Desktop", 1440, 900),
+    DESKTOP("Desktop", 1920, 1080),
     TABLET("Tablet", 768, 1024),
     MOBILE("Mobile", 375, 667);
 

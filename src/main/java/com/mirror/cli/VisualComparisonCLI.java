@@ -1,6 +1,6 @@
 package com.mirror.cli;
 
-import com.mirror.model.DiffResult;
+import com.mirror.model.SemanticComparisonResult;
 import com.mirror.model.Viewport;
 import com.mirror.orchestrator.ComparisonOrchestrator;
 
@@ -91,7 +91,7 @@ public class VisualComparisonCLI {
 
     private static void runComparison(String url, String figmaFile, String figmaNode, Viewport viewport) {
         try {
-            DiffResult result = orchestrator.compare(url, figmaFile, figmaNode, viewport);
+            SemanticComparisonResult result = orchestrator.compareSemantic(url, figmaFile, figmaNode, viewport);
 
             System.out.println("\n╔════════════════════════════════════════════════════════╗");
             System.out.println("║                  📊 COMPARISON RESULTS                   ║");
@@ -100,17 +100,9 @@ public class VisualComparisonCLI {
             System.out.println("✅ HTML Report generated successfully!");
             System.out.println("📁 Check the 'reports/' directory for the full report");
             System.out.println();
-            System.out.println("Summary:");
-            System.out.println("  Mismatch: " + String.format("%.2f%%", result.getMismatchPercent()));
-            System.out.println("  Severity: " + result.getSeverity().getLabel());
-            System.out.println("  Issues: " + result.getRegions().size() + " regions");
-            
-            if (!result.getObservations().isEmpty()) {
-                System.out.println("\nTop Observations:");
-                result.getObservations().stream()
-                        .limit(5)
-                        .forEach(obs -> System.out.println("  • " + obs));
-            }
+            System.out.println("Summary (semantic):");
+            System.out.println("  Total issues: " + result.getSummary().getTotalIssues());
+            System.out.println("  Severity: " + result.getSummary().getSeverity());
             
         } catch (Exception e) {
             System.err.println("\n❌ Error during comparison: " + e.getMessage());

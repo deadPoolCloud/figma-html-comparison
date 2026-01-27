@@ -96,7 +96,7 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/compare" `
 curl -X POST "http://localhost:8080/api/compare" \
   -d "url=https://your-website.com" \
   -d "figmaFile=abc123def456" \
-  -d "figmaFrame=68:108" \
+  -d "figmaFrame=68:\
   -d "viewport=DESKTOP"
 ```
 
