@@ -120,10 +120,14 @@ public class SeleniumCaptureService implements WebCaptureService {
             Thread.sleep(1500);
 
             // Wait for any final animations to complete
-            js.executeScript(
-                    "const animations = document.getAnimations();" +
-                            "return Promise.all(animations.map(a => a.finished));"
-            );
+            try {
+                js.executeScript(
+                        "const animations = document.getAnimations();" +
+                                "return Promise.all(animations.map(a => a.finished));"
+                );
+            } catch (Exception e) {
+                System.out.println("Animation check skipped: " + e.getMessage());
+            }
 
             // Take the screenshot
             System.out.println("Capturing screenshot...");

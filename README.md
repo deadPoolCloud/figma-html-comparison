@@ -84,8 +84,8 @@ The application will start on `http://localhost:8080`
 Invoke-RestMethod -Uri "http://localhost:8080/api/compare" `
     -Method POST `
     -Body @{
-        url = "https://your-website.com"
-        figmaFile = "abc123def456"
+        url = "https://zolanah-new-weavers.webflow.io/"
+        figmaFile = "kaDcp2VTNV8RL0G58l3bwO"
         figmaFrame = "68:108"
         viewport = "DESKTOP"
     }
