@@ -4,12 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cd3059c2-67cd-45e4-afb3-21beecb5fc47" name="Changes" comment="Implemented FigmaMock Service to avoid 429">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+    <list default="true" id="cd3059c2-67cd-45e4-afb3-21beecb5fc47" name="Changes" comment="Updated Final Animation Logic">
       <change beforePath="$PROJECT_DIR$/debug_images/figma_design.png" beforeDir="false" afterPath="$PROJECT_DIR$/debug_images/figma_design.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/debug_images/web_screenshot.png" beforeDir="false" afterPath="$PROJECT_DIR$/debug_images/web_screenshot.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/mirror/capture/SeleniumCaptureService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/mirror/capture/SeleniumCaptureService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,7 +56,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769149339975</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Updated Final Animation Logic">
+      <option name="closed" value="true" />
+      <created>1769496488579</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1769496488579</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -75,6 +80,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Implemented FigmaMock Service to avoid 429" />
-    <option name="LAST_COMMIT_MESSAGE" value="Implemented FigmaMock Service to avoid 429" />
+    <MESSAGE value="Updated Final Animation Logic" />
+    <option name="LAST_COMMIT_MESSAGE" value="Updated Final Animation Logic" />
   </component>
 </project>
