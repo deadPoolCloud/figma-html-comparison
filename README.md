@@ -1,584 +1,212 @@
-# 🎨 Figma HTML Visual Regression Testing Tool
+# 🎨 Figma HTML Visual & Semantic Diff Framework
 
-A QA-friendly Java-based Visual Regression Testing Tool that compares approved Figma UI designs with implemented HTML/CSS web pages at a pixel-to-pixel level.
+A production-grade Visual Regression Testing Tool that compares approved Figma designs with implemented HTML/CSS web pages. It goes beyond pixel diffs by performing **deep semantic analysis** directly from the Figma Node Tree.
 
 ## 📋 Overview
 
-This tool helps QA testers and designers easily identify UI mismatches between Figma designs and live web pages by:
-- Fetching design screens from Figma using Figma REST APIs (or using local cached images)
-- Capturing full-page screenshots of HTML pages using Selenium WebDriver with lazy-loading support
-- Performing pixel-to-pixel image comparison using OpenCV
-- Classifying visual differences (alignment, spacing, font, color, missing elements)
-- Generating comprehensive HTML reports with clear observations and severity levels
+This tool automatically detects both matching logic and pixel-perfect accuracy defects between design and implementation:
+
+1.  **Visual Diff**: Pixel-to-pixel image comparison using OpenCV.
+2.  **Semantic Diff**: Structural analysis of Layout, Typography, Spacing, and Colors.
+
+**New in v2:**
+*   **Playwright Engine**: Replaces Selenium for robust, full-page rendering and accurate DOM extraction.
+*   **Smart Matching**: Uses a multi-strategy engine (Exact Text > Fuzzy Text > Spatial) to pair semantic elements.
+*   **Deep Figma Integration**: Fetches the full design node tree via Figma Rest API (no manual JSON exports required).
 
 ## 🎯 Key Features
 
-✅ **Figma Integration** - Direct integration with Figma REST API with rate limit handling  
-✅ **Local Figma Cache** - Use downloaded Figma designs to avoid API rate limits  
-✅ **Responsive Testing** - Support for Desktop, Tablet, and Mobile viewports  
-✅ **Full-Page Capture** - Captures entire scrollable page with lazy-loaded content  
-✅ **Smart Image Alignment** - Automatically aligns images of different dimensions  
-✅ **Pixel-to-Pixel Comparison** - Accurate visual difference detection  
-✅ **Issue Classification** - Automatic categorization of visual issues  
-✅ **QA-Friendly Reports** - HTML reports with observations like "Button padding differs by ~6px"  
-✅ **Severity Levels** - Minor, Major, and Critical classifications  
-✅ **REST API** - Spring Boot REST API support  
-✅ **CI/CD Ready** - Easy integration into automated pipelines
+✅ **Figma API Integration** - Fetches both visual renders (PNG) and **semantic node trees (JSON)** directly.
+✅ **Smart Element Matching** - Intelligently pairs Figma text nodes with HTML elements using content analysis.
+✅ **Playwright Capture** - Accurate, full-page screenshots with lazy-loading support and network idle detection.
+✅ **Responsive Testing** - Configurable viewports (Desktop, Tablet, Mobile).
+✅ **Hybrid Comparison** - Combines visual heatmaps with structural data (e.g., "Font size mismatch: 16px vs 14px").
+✅ **Local Cache Strategy** - Caches Figma API responses to optimize performance and avoid rate limits.
+✅ **QA-Friendly Reporting** - Generates HTML reports with side-by-side visual and semantic insights.
+✅ **CI/CD Ready** - Deployable as a Spring Boot JAR or Docker container.
 
 ## 📦 Prerequisites
 
 - **Java 17+** (JDK 17 or higher)
-- **Maven 3.6+**
-- **Chrome/Chromium** browser (for Selenium WebDriver)
-- **Figma Personal Access Token** ([How to get one](https://www.figma.com/developers/api#access-tokens))
-- **ChromeDriver** (automatically managed by Selenium 4.17+)
+- **Maven 3.8+**
+- **Figma Personal Access Token** ([Get one here](https://www.figma.com/developers/api#access-tokens))
 
-## 🚀 Quick Start
+*Note: Playwright will automatically download the necessary browser binaries (Chromium) on first run.*
 
-### 1. Clone and Build
+## 🚀 How to Run
 
+### 1. Build the Framework
+Ensure you have **Java 17+** and **Maven** installed. Build the project using:
 ```bash
-git clone <repository-url>
-cd figma-html-comparison-master
 mvn clean package
 ```
 
 ### 2. Set Figma Token
+The tool requires a Figma API token to fetch designs. Set it as an environment variable:
+- **Windows (PowerShell)**: `$env:FIGMA_TOKEN = "your_token"`
+- **Linux/Mac**: `export FIGMA_TOKEN=your_token`
 
-Set your Figma personal access token as an environment variable:
+---
 
-**Windows (PowerShell):**
-```powershell
-$env:FIGMA_TOKEN = "your_figma_token_here"
-```
+### 3. Option A: Run via Command Line (CLI)
+The CLI supports interactive and direct argument modes.
 
-**Windows (Command Prompt):**
-```cmd
-set FIGMA_TOKEN=your_figma_token_here
-```
-
-**Linux/Mac:**
+#### Interactive Mode (easiest)
+Simply run the JAR without arguments:
 ```bash
-export FIGMA_TOKEN=your_figma_token_here
-```
-
-### 3. Start the Application
-
-**Using Spring Boot JAR (Recommended):**
-```powershell
-# PowerShell
-java -jar target\figma-html-visual-mirror-1.0.0.jar
-```
-
-```bash
-# Linux/Mac
 java -jar target/figma-html-visual-mirror-1.0.0.jar
 ```
+Follow the prompts to enter your **URL**, **Figma File ID**, and **Node ID**.
 
-The application will start on `http://localhost:8080`
+#### Direct Arguments Mode
+For automation or scripts, provide arguments in this order:
+`java -jar <jar> <url> <figmaFileId> <figmaNodeId> [viewport] [mode]`
+- `viewport`: `DESKTOP`, `TABLET`, or `MOBILE`
+- `mode`: `ALL` (Pixel + Semantic) or `SEMANTIC` (Fast logic only)
 
-### 4. Run Comparison via REST API
-
-**PowerShell:**
-```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/api/compare" `
-    -Method POST `
-    -Body @{
-        url = "https://zolanah-new-weavers.webflow.io/"
-        figmaFile = "kaDcp2VTNV8RL0G58l3bwO"
-        figmaFrame = "68:108"
-        viewport = "DESKTOP"
-    }
+**Example:**
+```bash
+java -jar target/figma-html-visual-mirror-1.0.0.jar https://google.com kaDcp2VTNV8RL0G58l3bwO 68:108 DESKTOP ALL
 ```
 
-**curl (Linux/Mac/Git Bash):**
+---
+
+### 4. Option B: Run as a REST API
+Start the application in server mode (default when no CLI args are passed, if not using the Main wrapper):
+```bash
+java -jar target/figma-html-visual-mirror-1.0.0.jar
+```
+*Note: If your JAR is configured to run CLI by default, use `mvn spring-boot:run` to start the server.*
+
+The API will be available at `http://localhost:8080/api/compare`.
+
+**POST Request Example:**
 ```bash
 curl -X POST "http://localhost:8080/api/compare" \
-  -d "url=https://your-website.com" \
-  -d "figmaFile=abc123def456" \
-  -d "figmaFrame=68:\
-  -d "viewport=DESKTOP"
+     -d "url=https://your-site.com" \
+     -d "figmaFile=kaDcp2..." \
+     -d "figmaFrame=68:108" \
+     -d "viewport=DESKTOP" \
+     -d "semanticOnly=false"
 ```
 
-**Example with Real Data:**
-```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/api/compare" `
-    -Method POST `
-    -Body @{
-        url = "https://zolanah-new-weavers.webflow.io"
-        figmaFile = "kaDcp2VTNV8RL0G58l3bwO"
-        figmaFrame = "68:108"
-        viewport = "DESKTOP"
-    }
-```
+---
 
-## 📖 Usage Guide for QA Testers
+### 5. View Results
+After a run, check the `reports/` folder:
+- **`report_YYYYMMDD_HHMMSS.html`**: A visual QA report with heatmaps and side-by-side typography audit.
+- **`semantic_report_YYYYMMDD_HHMMSS.json`**: A machine-readable JSON file for CI/CD failures.
+- **`visual_report_YYYYMMDD_HHMMSS.json`**: Metadata summary of visual discrepancies.
 
-### Understanding Figma File and Node IDs
 
-1. **Figma File ID**: Found in the Figma file URL
-   - Example URL: `https://www.figma.com/file/abc123def456/MyDesign`
-   - File ID: `abc123def456`
+## 🧠 How it Works (The Simple Version)
 
-2. **Figma Node ID**: The frame/node ID you want to export
-   - In Figma: Right-click frame → **Copy link to selection**
-   - URL format: `https://www.figma.com/file/abc123/name?node-id=68-108`
-   - Node ID: `68:108` (replace the dash with colon)
-   - Example: `68:108`, `123:456`, `1:23`
+Imagine you are checking a shopping receipt against what's actually in your bags. This tool does the same for your website:
 
-### Running a Comparison
+1.  **The "Wishlist" (Figma)**: We look at the Figma design as a digital blueprint. We extract exactly what should be there: specific colors, font sizes, and exact words.
+2.  **The "Reality" (Your Website)**: We open your website in a real browser and "scan" every single element. We don't just look at it; we measure it down to the pixel.
+3.  **The "Smart Match"**: The tool is smart enough to know that if the design says "Sign Up" and the website says "Sign up", they are likely the same thing. It "pairs" them together so it can compare them.
+4.  **The Audit Report**: Finally, it tells you:
+    *   ✅ **Match**: Perfect! Code matches Design.
+    *   ⚠️ **Drift**: It's the right text/font, but slightly the wrong size or spacing.
+    *   ❌ **Mismatch**: Something is wrong (e.g. wrong color or font used).
+    *   🛑 **Missing**: You forgot to build something that was in the design!
 
-**Step 1: Start the Server**
-```powershell
-java -jar target\figma-html-visual-mirror-1.0.0.jar
-```
+## 🛠️ Under the Hood: Data & APIs
 
-**Step 2: Run Comparison (in a new PowerShell window)**
-```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/api/compare" `
-    -Method POST `
-    -Body @{
-        url = "https://your-website.com"
-        figmaFile = "your_figma_file_id"
-        figmaFrame = "your_node_id"
-        viewport = "DESKTOP"
-    }
-```
+For those who want to know exactly what’s happening behind the scenes:
 
-**Step 3: View the Report**
-```powershell
-# Open the most recent report
-Invoke-Item (Get-ChildItem reports\*.html | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
+### 1. The Figma Extraction
+*   **API Used**: `https://api.figma.com/v1/files/{file_key}/nodes?ids={frame_id}`
+Header required: X-Figma-Token: your_figma_token
 
-# Or open the reports folder
-Invoke-Item reports\
-```
+*   **Format**: The tool receives a massive JSON tree from Figma.
+*   **What we extract**: We filter out all the "design layers" and keep only the **Semantic Data**:
+    *   Raw content (strings)
+    *   Typography properties (font family, weight, size, line-height)
+    *   Exact X/Y coordinates
+    *   Brand colors
 
-### Understanding the HTML Report
+### 2. The Website Extraction (Live Data)
+*   **Form**: We use **Playwright** to run a specialized JavaScript "crawler" inside your live website.
+*   **What we get**:
+    *   **Computed Styles**: This is the most important part. We don't look at your CSS files; we ask the browser: *"What is the final, rendered font-size and color the user is seeing right now?"*
+    *   **Bounding Boxes**: We get the exact pixel location of every word and button on the screen.
 
-The generated HTML report includes:
+### 3. The Comparison Logic
+*   **What is a "Snapshot"?**: Think of a snapshot as a **"Data Map"** or a spreadsheet of your UI. It’s not an image; it’s a list of every element, where it is, what it says, and how it’s styled.
+    *   **Figma Snapshot**: A map of the "Design Intent."
+    *   **HTML Snapshot**: A map of the "Final Implementation."
+*   **The Match**: The tool then compares these two maps side-by-side to find discrepancies.
 
-1. **Summary Card**
-   - Mismatch Percentage: Overall difference between Figma and HTML
-   - Severity: MINOR (<1%), MAJOR (1-5%), CRITICAL (>5%)
-   - Issue Regions: Number of detected difference areas
+---
 
-2. **Visual Comparison**
-   - **Figma Design (Expected)**: The approved design
-   - **HTML Implementation (Actual)**: The live webpage
-   - **Differences (Red Overlay)**: Highlighted mismatched pixels
+## 📉 Why Mismatches Happen & Current Drawbacks
 
-3. **Human-Readable Observations**
-   - Specific issues like "Button padding differs by ~6px"
-   - "Font color mismatch in header text"
-   - "Alignment issue detected around X:100-Y:50"
+If you are seeing a high number of mismatches despite the site looking "correct," here are the common reasons and current technical limitations:
 
-4. **Detailed Issue Regions Table**
-   - Position coordinates (X, Y)
-   - Size dimensions (Width × Height)
-   - Issue Type (alignment, spacing, font, color, missing, extra)
-   - Observation description
-   - Impact percentage
+### 1. The "Invisible Element" Problem
+Modern websites use many "wrapper" elements (like extra `divs` for layout or hidden menus). Sometimes our capture script sees these extra layers as "Extra Elements" because they don't exist in Figma's simpler design structure.
 
-## 🔄 How It Works
+### 2. Punctuation & Micro-Text
+The tool is very literal. If Figma has a "smart quote" (`“`) but the website uses a standard quote (`"`), it may flag a mismatch. We are constantly improving our "Normalization" to ignore these minor differences.
 
-### Current Workflow
+### 3. Animation Timing (The biggest drawback)
+If your website has fade-in animations or "Slide up on scroll" effects, the tool might try to capture the element while it is still invisible or moving. Even though the tool waits for the page to settle, complex JavaScript animations can occasionally cause intermittent "Missing" or "Drift" reports.
 
-```
-Run Comparison
-    ↓
-1. Capture LIVE website (fresh screenshot each time)
-   - Opens Chrome headless
-   - Waits for page load, fonts, and images
-   - Scrolls through page to trigger lazy-loaded content
-   - Captures full-page screenshot
-   - Saves to debug_images/web_screenshot.png
-    ↓
-2. Load Figma design
-   - Option A: Fetch from Figma API (with retry on rate limits)
-   - Option B: Use local cached file (figma_frame.png)
-    ↓
-3. Align images to same dimensions
-   - Pads smaller image with white background
-   - Ensures both images match in width and height
-    ↓
-4. Compare pixel-by-pixel with OpenCV
-   - Detects visual differences
-   - Classifies issues by type
-   - Calculates mismatch percentage
-    ↓
-5. Generate HTML report
-   - Visual side-by-side comparison
-   - Issue highlights and observations
-   - Saves to reports/ folder
-```
+### 4. Coordinate Shifts
+Figma uses a fixed, absolute canvas. HTML coordinates change based on screen size, scroll position, and browser zoom. While we use "Relative Proximity" to match elements, a high-density layout can sometimes cause a "Misalignment" flag if the website layout shifted by even a few pixels to accommodate browser scrollbars.
 
-### What Gets Updated on Each Run
+---
 
-✅ **Web Screenshot** - Captured fresh EVERY TIME  
-✅ **Comparison Results** - Generated fresh EVERY TIME  
-✅ **HTML Report** - New report generated EVERY TIME  
-❌ **Figma Design** - Only updated when using FigmaServiceImpl (not FigmaServiceMock)
-
-## 🎛️ Working with Figma API Rate Limits
-
-### Option 1: Use Local Figma Cache (Current Setup)
-
-To avoid API rate limits during testing, the tool uses a local Figma image:
-
-**Setup:**
-1. Download Figma frame once:
-```powershell
-$headers = @{ "X-Figma-Token" = "YOUR_TOKEN" }
-$exportData = Invoke-RestMethod -Uri "https://api.figma.com/v1/images/FILE_ID?ids=NODE_ID&format=png&scale=1" -Headers $headers
-Invoke-WebRequest -Uri $exportData.images.'NODE_ID' -OutFile "figma_frame.png"
-```
-
-2. Use `FigmaServiceMock` in `ComparisonOrchestrator.java`:
-```java
-//private final FigmaService figmaService = new FigmaServiceMock();
-```
-
-**Benefits:**
-- ✅ No API calls (avoids rate limits)
-- ✅ Faster comparisons
-- ✅ Works offline
-- ❌ Figma design not auto-updated
-
-### Option 2: Use Figma API with Auto-Retry
-
-For production use with fresh Figma designs:
-
-1. Switch to `FigmaServiceImpl` in `ComparisonOrchestrator.java`:
-
-[//]: # (```java)
-
-[//]: # (private final FigmaService figmaService = new FigmaServiceImpl&#40;&#41;;)
-
-[//]: # (```)
-
-2. The tool automatically retries on rate limits (429 errors) with exponential backoff
-
-**Benefits:**
-- ✅ Always uses latest Figma design
-- ✅ Automatic retry on rate limits
-- ❌ Requires valid Figma token
-- ❌ Subject to API rate limits
-
-### Checking Figma Dimensions
-
-To verify your Figma frame dimensions:
-
-```powershell
-$headers = @{ "X-Figma-Token" = "YOUR_TOKEN" }
-$exportData = Invoke-RestMethod -Uri "https://api.figma.com/v1/images/FILE_ID?ids=NODE_ID&format=png&scale=1" -Headers $headers
-Invoke-WebRequest -Uri $exportData.images.'NODE_ID' -OutFile "figma_frame.png"
-
-Add-Type -AssemblyName System.Drawing
-$img = [System.Drawing.Image]::FromFile("$PWD\figma_frame.png")
-Write-Host "Figma Frame: $($img.Width) x $($img.Height) pixels"
-$img.Dispose()
-```
-
-## 🔍 Issue Classification
-
-The tool automatically classifies visual differences into:
-
-| Issue Type | Description | Example |
-|------------|-------------|---------|
-| **Alignment** | Elements are misaligned | "Horizontal alignment issue detected around X:100-Y:50" |
-| **Spacing** | Padding or margins differ | "Spacing differs by approximately 6px at position X:200-Y:100" |
-| **Font** | Font size or style mismatch | "Font size mismatch detected in text region X:50-Y:200" |
-| **Color** | Color values don't match | "Color mismatch detected at X:150-Y:300" |
-| **Missing** | UI element missing from HTML | "Missing or extra UI element detected at X:300-Y:400" |
-| **Extra** | Extra element in HTML | "Missing or extra UI element detected at X:300-Y:400" |
-
-## 📊 Severity Levels
-
-| Severity | Threshold | Description |
-|----------|-----------|-------------|
-| **MINOR** | < 1% | Small differences that may not affect user experience |
-| **MAJOR** | 1-5% | Noticeable differences that impact visual consistency |
-| **CRITICAL** | > 5% | Significant deviations that break design integrity |
-
-## 🛠️ Configuration
+## 🎛️ Configuration
 
 ### Viewport Sizes
+Modify `src/main/java/com/mirror/model/Viewport.java` to adjust standard sizes:
+- **Desktop**: 1440 × 900
+- **Tablet**: 768 × 1024
+- **Mobile**: 375 × 667
 
-Default viewport configurations:
-
-- **Desktop**: 1440 × 900 pixels
-- **Tablet**: 768 × 1024 pixels
-- **Mobile**: 375 × 667 pixels
-
-To modify, edit `src/main/java/com/mirror/model/Viewport.java`
-
-### Pixel Difference Threshold
-
-Default threshold: `30` (0-255 scale)
-- Lower values = more sensitive (detects smaller differences)
-- Higher values = less sensitive (only detects major differences)
-
-To adjust, modify `PIXEL_DIFF_THRESHOLD` in `OpenCvDiffEngine.java`
-
-### Selenium Capture Settings
-
-The enhanced `SeleniumCaptureService` includes:
-
-- ✅ Full page height capture (including scrollable content)
-- ✅ Lazy-loaded content triggering via scrolling
-- ✅ Web font loading detection
-- ✅ Image loading verification
-- ✅ CSS animation completion waiting
-- ✅ Dynamic content stabilization
-
-Wait times can be adjusted in `SeleniumCaptureService.java`
+### Configuration Classes
+- **Capture**: `PlaywrightCaptureService` (Wait times, Scroll logic).
+- **Matching**: `MatchingEngine` (Fuzzy thresholds, Max spatial distance).
+- **Semantics**: `SemanticAnalyzer` (Tolerance thresholds for pixels, colors).
 
 ## 📁 Project Structure
 
 ```
-figma-html-comparison-master/
-├── src/main/java/com/mirror/
-│   ├── capture/
-│   │   ├── SeleniumCaptureService.java   # Enhanced web capture with lazy loading
-│   │   └── WebCaptureService.java        # Capture interface
-│   ├── figma/
-│   │   ├── FigmaService.java             # Figma API interface
-│   │   ├── FigmaServiceImpl.java         # Figma API with retry logic
-│   │   └── FigmaServiceMock.java         # Local file loader (for testing)
-│   ├── image/
-│   │   ├── ImageAligner.java             # Smart image dimension alignment
-│   │   ├── ImageUtil.java                # BufferedImage ↔ Mat conversion
-│   │   ├── OpenCvDiffEngine.java         # Pixel-to-pixel comparison
-│   │   ├── VisualDiffClassifier.java     # Issue classification
-│   │   └── VisualDiffEngine.java         # Diff engine interface
-│   ├── model/
-│   │   ├── DiffRegion.java               # Difference region model
-│   │   ├── DiffResult.java               # Comparison result model
-│   │   ├── IssueSeverity.java            # Severity enum
-│   │   └── Viewport.java                 # Viewport enum
-│   ├── orchestrator/
-│   │   ├── ComparisonOrchestrator.java   # Main orchestration logic
-│   │   └── CompareController.java        # REST API controller
-│   ├── report/
-│   │   ├── HtmlReportService.java        # HTML report generator
-│   │   └── ReportService.java            # Report interface
-│   └── MirrorApplication.java            # Spring Boot application
-├── debug_images/                          # Debug screenshots
-│   ├── web_screenshot.png                # Latest web capture
-│   └── figma_design.png                  # Latest Figma design
-├── reports/                               # Generated HTML reports
-├── figma_frame.png                        # Cached Figma design (optional)
-├── pom.xml                                # Maven dependencies
-└── README.md                              # This file
+src/main/java/com/mirror/
+├── capture/
+│   ├── PlaywrightCaptureService.java  # [NEW] Comparison engine (Visual + Semantic)
+│   └── WebCaptureService.java         # Interface
+├── figma/
+│   ├── FigmaService.java
+│   ├── FigmaServiceImpl.java          # [UPDATED] Fetches Images + Node Structure
+│   └── FigmaServiceMock.java          # Local file fallback
+├── semantic/
+│   ├── MatchingEngine.java            # [NEW] Smart Element Pairing Logic
+│   ├── SemanticAnalyzer.java          # Core comparison logic
+│   ├── FigmaSemanticExtractor.java    # [UPDATED] Parses API JSON
+│   ├── HtmlSemanticSnapshot.java      # HTML Data Model
+│   └── FigmaSemanticSnapshot.java     # Figma Data Model
+├── image/
+│   ├── OpenCvDiffEngine.java          # Pixel-to-pixel comparison
+│   └── ImageAligner.java              # Dimension alignment
+├── orchestrator/
+│   └── ComparisonOrchestrator.java    # Workflow Coordinator
+└── report/
+    └── HtmlReportService.java         # HTML Report Generator
 ```
 
-## 🔧 Advanced Usage
+## 🐛 working with Rate Limits
 
-### Batch Testing Multiple Pages
+The `FigmaServiceImpl` includes automatic rate limit handling. If the API returns a `429`, the service will throw a nice exception with the `Retry-After` duration.
 
-Create a PowerShell script to test multiple pages:
-
-```powershell
-# batch-test.ps1
-$pages = @(
-    @{url="https://myapp.com/home"; frame="123:456"},
-    @{url="https://myapp.com/about"; frame="123:789"},
-    @{url="https://myapp.com/contact"; frame="123:012"}
-)
-
-foreach ($page in $pages) {
-    Write-Host "Testing: $($page.url)" -ForegroundColor Yellow
-    Invoke-RestMethod -Uri "http://localhost:8080/api/compare" `
-        -Method POST `
-        -Body @{
-            url = $page.url
-            figmaFile = "YOUR_FIGMA_FILE_ID"
-            figmaFrame = $page.frame
-            viewport = "DESKTOP"
-        }
-    Start-Sleep -Seconds 5
-}
-
-Invoke-Item reports\
-```
-
-### CI/CD Integration
-
-**Jenkins Pipeline Example:**
-```groovy
-stage('Visual Regression Test') {
-    steps {
-        sh '''
-            export FIGMA_TOKEN="${FIGMA_TOKEN}"
-            java -jar target/figma-html-visual-mirror-1.0.0.jar &
-            SERVER_PID=$!
-            sleep 10
-            
-            curl -X POST "http://localhost:8080/api/compare" \
-              -d "url=${WEB_URL}" \
-              -d "figmaFile=${FIGMA_FILE_ID}" \
-              -d "figmaFrame=${FIGMA_NODE_ID}" \
-              -d "viewport=DESKTOP"
-            
-            kill $SERVER_PID
-        '''
-    }
-    post {
-        always {
-            archiveArtifacts 'reports/**/*.html'
-            publishHTML([
-                reportDir: 'reports',
-                reportFiles: 'report_*.html',
-                reportName: 'Visual Regression Report'
-            ])
-        }
-    }
-}
-```
-
-**GitHub Actions Example:**
-```yaml
-- name: Start Visual Regression Server
-  env:
-    FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
-  run: |
-    java -jar target/figma-html-visual-mirror-1.0.0.jar &
-    sleep 10
-
-- name: Run Visual Regression Test
-  run: |
-    curl -X POST "http://localhost:8080/api/compare" \
-      -d "url=${{ env.WEB_URL }}" \
-      -d "figmaFile=${{ env.FIGMA_FILE_ID }}" \
-      -d "figmaFrame=${{ env.FIGMA_NODE_ID }}" \
-      -d "viewport=DESKTOP"
-      
-- name: Upload HTML Report
-  uses: actions/upload-artifact@v3
-  with:
-    name: visual-regression-report
-    path: reports/*.html
-```
-
-### Programmatic Usage
-
-```java
-import com.mirror.model.Viewport;
-import com.mirror.model.DiffResult;
-import com.mirror.orchestrator.ComparisonOrchestrator;
-
-//ComparisonOrchestrator orchestrator = new ComparisonOrchestrator();
-//
-//DiffResult result = orchestrator.compare(
-//    "https://myapp.com/page",
-//    "figma_file_id",
-//    "figma_node_id",
-//    Viewport.DESKTOP
-//);
-//
-//System.out.println("Mismatch: " + result.getMismatchPercent() + "%");
-//System.out.println("Severity: " + result.getSeverity());
-//System.out.println("Issues: " + result.getRegions().size());
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **"Figma token not configured"**
-   - Solution: Set `FIGMA_TOKEN` environment variable before starting the server
-   - Verify: `echo $env:FIGMA_TOKEN` (PowerShell) or `echo $FIGMA_TOKEN` (Linux/Mac)
-
-2. **"Failed to capture webpage"**
-   - Check Chrome/Chromium is installed
-   - Ensure ChromeDriver is accessible (Selenium 4.17+ manages this automatically)
-   - Verify the URL is accessible from your network
-   - Check for firewall or proxy issues
-
-3. **"HTTP 429: Rate limit exceeded"**
-   - Switch to `FigmaServiceMock` to use local cached images
-   - Wait 10-15 minutes for rate limit to reset
-   - Or download Figma frame manually and place in project root as `figma_frame.png`
-
-4. **"Images have different dimensions"**
-   - This is now automatically handled by `ImageAligner`
-   - Check `debug_images/` folder for actual captured dimensions
-   - Ensure full page is loading (check for lazy-loaded content)
-
-5. **"ArrayIndexOutOfBoundsException in ImageUtil"**
-   - Fixed in updated `ImageUtil.java` - handles grayscale and color images
-   - Rebuild project: `mvn clean package`
-
-6. **Screenshots miss lazy-loaded content**
-   - Enhanced `SeleniumCaptureService` now scrolls through entire page
-   - Adjust wait times in `SeleniumCaptureService.java` if needed
-   - Increase `Thread.sleep()` durations for slower websites
-
-7. **Out of Memory Errors**
-   - Increase JVM heap size: `java -Xmx2g -jar target/figma-html-visual-mirror-1.0.0.jar`
-   - For very large pages, consider: `java -Xmx4g -jar ...`
-
-### Debug Information
-
-The tool saves debug images to `debug_images/` folder:
-- `web_screenshot.png` - Latest captured web page
-- `figma_design.png` - Latest loaded Figma design
-
-Check these images to verify:
-- Full page was captured (no missing content)
-- Dimensions match expectations
-- Images loaded correctly
-
-### Verbose Logging
-
-The server console shows detailed logs:
-```
-=== WEB PAGE CAPTURE ===
-URL: https://example.com
-Viewport: Desktop (1440x900)
-Full page dimensions: 1440 x 6587
-Screenshot captured: 1440 x 6587
-========================
-
-=== FIGMA DESIGN FETCH ===
-Figma design fetched: 1440 x 6587
-==========================
-
-=== IMAGE ALIGNMENT ===
-Target dimensions: 1440 x 6587
-==========================
-
-=== OPENCV COMPARISON ===
-Mismatch percentage: 31.72%
-=========================
-```
-
-## 📝 Best Practices
-
-1. **Use Local Figma Cache for Testing**
-   - Download Figma designs once
-   - Use `FigmaServiceMock` during development
-   - Switch to `FigmaServiceImpl` for production/CI
-
-2. **Test Multiple Viewports**
-   - Run comparisons for DESKTOP, TABLET, and MOBILE
-   - Ensure responsive design matches across all viewports
-
-3. **Monitor Page Load Times**
-   - Adjust wait times for slower sites
-   - Check lazy-loaded content is fully loaded
-
-4. **Review Debug Images**
-   - Always check `debug_images/` folder
-   - Verify screenshots captured correctly
-   - Confirm dimensions match Figma design
-
-5. **Organize Reports**
-   - Reports are timestamped automatically
-   - Archive old reports regularly
-   - Use descriptive Figma frame names
+To avoid hitting limits during development:
+1.  Run one test to fetch the data.
+2.  The service automatically caches images and JSON to `cache/figma/`.
+3.  Subsequent runs use the cache. Delete the `cache/` folder to force a refresh.
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Please ensure you verify changes with `mvn test` before submitting a Pull Request.

@@ -7,6 +7,19 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class MirrorApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(MirrorApplication.class, args);
+        boolean serverMode = false;
+        for (String arg : args) {
+            if ("--server".equalsIgnoreCase(arg)) {
+                serverMode = true;
+                break;
+            }
+        }
+
+        if (serverMode) {
+            SpringApplication.run(MirrorApplication.class, args);
+        } else {
+            // Default to CLI mode (handles both interactive and direct arguments)
+            com.mirror.cli.VisualComparisonCLI.main(args);
+        }
     }
 }

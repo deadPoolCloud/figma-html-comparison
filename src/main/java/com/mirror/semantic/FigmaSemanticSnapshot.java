@@ -131,6 +131,17 @@ public class FigmaSemanticSnapshot {
         @JsonProperty("height")
         private double height;
 
+        @JsonProperty("padding_left")
+        private double paddingLeft;
+        @JsonProperty("padding_right")
+        private double paddingRight;
+        @JsonProperty("padding_top")
+        private double paddingTop;
+        @JsonProperty("padding_bottom")
+        private double paddingBottom;
+        @JsonProperty("item_spacing")
+        private double itemSpacing;
+
         public double getX() {
             return x;
         }
@@ -161,6 +172,46 @@ public class FigmaSemanticSnapshot {
 
         public void setHeight(double height) {
             this.height = height;
+        }
+
+        public double getPaddingLeft() {
+            return paddingLeft;
+        }
+
+        public void setPaddingLeft(double paddingLeft) {
+            this.paddingLeft = paddingLeft;
+        }
+
+        public double getPaddingRight() {
+            return paddingRight;
+        }
+
+        public void setPaddingRight(double paddingRight) {
+            this.paddingRight = paddingRight;
+        }
+
+        public double getPaddingTop() {
+            return paddingTop;
+        }
+
+        public void setPaddingTop(double paddingTop) {
+            this.paddingTop = paddingTop;
+        }
+
+        public double getPaddingBottom() {
+            return paddingBottom;
+        }
+
+        public void setPaddingBottom(double paddingBottom) {
+            this.paddingBottom = paddingBottom;
+        }
+
+        public double getItemSpacing() {
+            return itemSpacing;
+        }
+
+        public void setItemSpacing(double itemSpacing) {
+            this.itemSpacing = itemSpacing;
         }
     }
 
@@ -199,6 +250,12 @@ public class FigmaSemanticSnapshot {
 
         @JsonProperty("color")
         private String color;
+
+        @JsonProperty("parent_id")
+        private String parentId;
+
+        @JsonProperty("type")
+        private String type;
 
         public String getId() {
             return id;
@@ -287,6 +344,123 @@ public class FigmaSemanticSnapshot {
         public void setColor(String color) {
             this.color = color;
         }
+
+        public String getParentId() {
+            return parentId;
+        }
+
+        public void setParentId(String parentId) {
+            this.parentId = parentId;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+    }
+
+    @JsonProperty("interactive_nodes")
+    private List<InteractiveNode> interactiveNodes = new ArrayList<>();
+
+    public List<InteractiveNode> getInteractiveNodes() {
+        return interactiveNodes;
+    }
+
+    public void setInteractiveNodes(List<InteractiveNode> interactiveNodes) {
+        this.interactiveNodes = interactiveNodes;
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class InteractiveNode {
+        @JsonProperty("id")
+        private String id;
+
+        @JsonProperty("name")
+        private String name;
+
+        @JsonProperty("text")
+        private String text;
+
+        @JsonProperty("rect")
+        private Rect rect;
+
+        @JsonProperty("background_color")
+        private String backgroundColor;
+
+        @JsonProperty("corner_radius")
+        private double cornerRadius;
+
+        @JsonProperty("parent_id")
+        private String parentId;
+
+        @JsonProperty("type")
+        private String type;
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public void setText(String text) {
+            this.text = text;
+        }
+
+        public Rect getRect() {
+            return rect;
+        }
+
+        public void setRect(Rect rect) {
+            this.rect = rect;
+        }
+
+        public String getBackgroundColor() {
+            return backgroundColor;
+        }
+
+        public void setBackgroundColor(String backgroundColor) {
+            this.backgroundColor = backgroundColor;
+        }
+
+        public double getCornerRadius() {
+            return cornerRadius;
+        }
+
+        public void setCornerRadius(double cornerRadius) {
+            this.cornerRadius = cornerRadius;
+        }
+
+        public String getParentId() {
+            return parentId;
+        }
+
+        public void setParentId(String parentId) {
+            this.parentId = parentId;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
     }
 }
-

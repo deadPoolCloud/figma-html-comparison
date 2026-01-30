@@ -11,7 +11,6 @@ import com.mirror.model.SemanticComparisonResult.TypographyIssue;
 import com.mirror.model.SemanticComparisonResult.TypographySnapshot;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -21,18 +20,15 @@ import java.util.List;
  */
 public class SemanticAnalyzer {
 
-    // Tolerances (can be externalized later)
-    private static final int PIXEL_NOISE_THRESHOLD = 3;       // px
-    private static final double BREAKPOINT_TOLERANCE_RATIO = 0.05; // 5% size tolerance within same breakpoint
+    private final SemanticConfig config;
 
-    private static final double FONT_SIZE_TOLERANCE = 1.0;    // px
-    private static final double LINE_HEIGHT_TOLERANCE = 2.0;  // px
-    private static final double LETTER_SPACING_TOLERANCE = 0.2; // px
+    public SemanticAnalyzer() {
+        this(SemanticConfig.DEFAULT);
+    }
 
-    private static final double SPACING_TOLERANCE = 8.0;      // px
-
-    private static final double COLOR_DELTA_E_WARN = 2.0;
-    private static final double COLOR_DELTA_E_FAIL = 6.0;
+    public SemanticAnalyzer(SemanticConfig config) {
+        this.config = config;
+    }
 
     public SemanticComparisonResult analyze(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html) {
         SemanticComparisonResult result = new SemanticComparisonResult();
@@ -42,13 +38,101 @@ public class SemanticAnalyzer {
         analyzeTypography(figma, html, result);
         analyzeSectionSizesAndAlignment(figma, html, result);
         analyzeSectionSpacing(figma, html, result);
-        // Color comparison can be extended once HTML color roles are mapped to Figma; placeholder for now
+        analyzeInteractiveElements(figma, html, result);
+        // Color comparison can be extended once HTML color roles are mapped to Figma;
+        // placeholder for now
 
         result.finalizeSummary();
         return result;
     }
 
-    private void analyzeScreenDimensions(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html, SemanticComparisonResult result) {
+    private void analyzeInteractiveElements(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html,
+            SemanticComparisonResult result) {
+        if (figma.getInteractiveNodes() == null || html.getInteractiveElements() == null) {
+            return;
+        }
+
+        List<HtmlSemanticSnapshot.InteractiveElement> htmlCandidates = new ArrayList<>(html.getInteractiveElements());
+        List<FigmaSemanticSnapshot.InteractiveNode> matchedFigma = new ArrayList<>();
+
+        for (FigmaSemanticSnapshot.InteractiveNode fn : figma.getInteractiveNodes()) {
+            // Find match by text
+            HtmlSemanticSnapshot.InteractiveElement match = findInteractiveMatch(fn, htmlCandidates);
+
+            if (match != null) {
+                htmlCandidates.remove(match);
+                matchedFigma.add(fn);
+                compareInteractiveElement(fn, match, result);
+            }
+        }
+
+        // Identify Missing Interactive (Figma ONLY)
+        for (FigmaSemanticSnapshot.InteractiveNode fn : figma.getInteractiveNodes()) {
+            if (!matchedFigma.contains(fn)) {
+                SemanticComparisonResult.MissingElementIssue missing = new SemanticComparisonResult.MissingElementIssue();
+                missing.setElementId(fn.getName());
+                missing.setText(fn.getText());
+                missing.setType("interactive");
+                result.getMissingElements().add(missing);
+            }
+        }
+
+        // Identify Extra Interactive (HTML ONLY)
+        for (HtmlSemanticSnapshot.InteractiveElement hn : htmlCandidates) {
+            SemanticComparisonResult.ExtraElementIssue extra = new SemanticComparisonResult.ExtraElementIssue();
+            extra.setElementId(hn.getTag() + "[" + hn.getText() + "]");
+            extra.setText(hn.getText());
+            extra.setTag(hn.getTag());
+            result.getExtraElements().add(extra);
+        }
+    }
+
+    private HtmlSemanticSnapshot.InteractiveElement findInteractiveMatch(FigmaSemanticSnapshot.InteractiveNode target,
+            List<HtmlSemanticSnapshot.InteractiveElement> candidates) {
+        String targetText = normalizeText(target.getText());
+        if (targetText.isEmpty())
+            return null;
+
+        for (HtmlSemanticSnapshot.InteractiveElement candidate : candidates) {
+            if (normalizeText(candidate.getText()).equalsIgnoreCase(targetText)) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private void compareInteractiveElement(FigmaSemanticSnapshot.InteractiveNode fn,
+            HtmlSemanticSnapshot.InteractiveElement hn, SemanticComparisonResult result) {
+        String elementId = "Interactive[" + fn.getText() + "]";
+
+        // Compare Size
+        double widthDiff = Math.abs(fn.getRect().getWidth() - hn.getRect().getWidth());
+        double heightDiff = Math.abs(fn.getRect().getHeight() - hn.getRect().getHeight());
+
+        if (widthDiff > config.pixelNoiseThreshold || heightDiff > config.pixelNoiseThreshold) {
+            ElementSizeIssue sizeIssue = new ElementSizeIssue();
+            sizeIssue.setElementId(elementId);
+            sizeIssue.setRole("button/interactive");
+            sizeIssue.setFigmaWidth(fn.getRect().getWidth());
+            sizeIssue.setFigmaHeight(fn.getRect().getHeight());
+            sizeIssue.setHtmlWidth(hn.getRect().getWidth());
+            sizeIssue.setHtmlHeight(hn.getRect().getHeight());
+            sizeIssue.setWidthDiffPx(widthDiff);
+            sizeIssue.setHeightDiffPx(heightDiff);
+            sizeIssue.setSeverity(SemanticSeverity.WARN); // Warn on size mismatch
+            sizeIssue.setNotes("Interactive element size differs");
+            result.getElementSizes().add(sizeIssue);
+        }
+
+        // Compare Background Color
+        ColorIssue colorIssue = compareColor(elementId, "background", fn.getBackgroundColor(), hn.getBackgroundColor());
+        if (colorIssue != null) {
+            result.getColors().add(colorIssue);
+        }
+    }
+
+    private void analyzeScreenDimensions(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html,
+            SemanticComparisonResult result) {
         ScreenDimensionsResult sd = new ScreenDimensionsResult();
         sd.setFigmaWidth(figma.getFrameWidth());
         sd.setFigmaHeight(figma.getFrameHeight());
@@ -77,96 +161,142 @@ public class SemanticAnalyzer {
     }
 
     private boolean withinBreakpointTolerance(int expected, int actual) {
-        if (expected == 0 || actual == 0) return true;
+        if (expected == 0 || actual == 0)
+            return true;
         double diff = Math.abs(expected - actual);
         double ratio = diff / (double) expected;
-        return ratio <= BREAKPOINT_TOLERANCE_RATIO;
+        return ratio <= config.breakpointToleranceRatio;
     }
 
-    private void analyzeTypography(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html, SemanticComparisonResult result) {
+    private void analyzeTypography(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html,
+            SemanticComparisonResult result) {
         List<FigmaSemanticSnapshot.TextNode> figmaTexts = new ArrayList<>(figma.getTextNodes());
-        List<HtmlSemanticSnapshot.TextNode> htmlTexts = new ArrayList<>(html.getTextNodes());
+        List<HtmlSemanticSnapshot.TextNode> availableHtmlTexts = new ArrayList<>(html.getTextNodes());
 
-        int count = Math.min(figmaTexts.size(), htmlTexts.size());
-        for (int i = 0; i < count; i++) {
-            FigmaSemanticSnapshot.TextNode ft = figmaTexts.get(i);
-            HtmlSemanticSnapshot.TextNode ht = htmlTexts.get(i);
+        // 1. Map Figma nodes to closest HTML nodes spatially
+        MatchingEngine matchingEngine = new MatchingEngine();
+        List<MatchingEngine.Match> matches = matchingEngine.matchTextNodes(figmaTexts, availableHtmlTexts);
 
-            TypographyIssue issue = new TypographyIssue();
-            issue.setElementId(ft.getName() != null ? ft.getName() : ("text_" + i));
+        List<FigmaSemanticSnapshot.TextNode> matchedFigma = new ArrayList<>();
+        List<HtmlSemanticSnapshot.TextNode> matchedHtml = new ArrayList<>();
 
-            TypographySnapshot figmaSnap = new TypographySnapshot();
-            figmaSnap.setText(normalizeText(ft.getText()));
-            figmaSnap.setFontFamily(safe(ft.getFontFamily()));
-            figmaSnap.setFontSize(ft.getFontSize());
-            figmaSnap.setFontWeight(safe(ft.getFontWeight()));
-            figmaSnap.setLineHeight(ft.getLineHeight());
-            figmaSnap.setLetterSpacing(ft.getLetterSpacing());
-            figmaSnap.setColor(safe(ft.getColor()));
+        for (MatchingEngine.Match match : matches) {
+            compareTypography(match.figma, match.html, result);
+            matchedFigma.add(match.figma);
+            matchedHtml.add(match.html);
+        }
 
-            TypographySnapshot htmlSnap = new TypographySnapshot();
-            htmlSnap.setText(normalizeText(ht.getText()));
-            htmlSnap.setFontFamily(safe(ht.getFontFamily()));
-            htmlSnap.setFontSize(ht.getFontSize());
-            htmlSnap.setFontWeight(safe(ht.getFontWeight()));
-            htmlSnap.setLineHeight(ht.getLineHeight());
-            htmlSnap.setLetterSpacing(ht.getLetterSpacing());
-            htmlSnap.setColor(safe(ht.getColor()));
-
-            issue.setFigma(figmaSnap);
-            issue.setHtml(htmlSnap);
-
-            boolean textMatches = equalsIgnoreWhitespace(figmaSnap.getText(), htmlSnap.getText());
-            boolean fontFamilyMatches = normalizeFontFamily(figmaSnap.getFontFamily())
-                    .equalsIgnoreCase(normalizeFontFamily(htmlSnap.getFontFamily()));
-
-            double fontSizeDiff = Math.abs(figmaSnap.getFontSize() - htmlSnap.getFontSize());
-            double lineHeightDiff = Math.abs(figmaSnap.getLineHeight() - htmlSnap.getLineHeight());
-            double letterSpacingDiff = Math.abs(figmaSnap.getLetterSpacing() - htmlSnap.getLetterSpacing());
-
-            boolean withinFontTolerance = fontSizeDiff <= FONT_SIZE_TOLERANCE
-                    && lineHeightDiff <= LINE_HEIGHT_TOLERANCE
-                    && letterSpacingDiff <= LETTER_SPACING_TOLERANCE;
-
-            StringBuilder notes = new StringBuilder();
-            if (!textMatches) {
-                notes.append("Text differs. ");
+        // Identify Missing (Figma ONLY)
+        for (FigmaSemanticSnapshot.TextNode fn : figmaTexts) {
+            if (!matchedFigma.contains(fn)) {
+                SemanticComparisonResult.MissingElementIssue missing = new SemanticComparisonResult.MissingElementIssue();
+                missing.setElementId(fn.getName());
+                missing.setText(fn.getText());
+                missing.setType("text");
+                result.getMissingElements().add(missing);
             }
-            if (!fontFamilyMatches) {
-                notes.append("Font family differs. ");
-            }
-            if (fontSizeDiff > FONT_SIZE_TOLERANCE) {
-                notes.append("Font size ").append(diffString(figmaSnap.getFontSize(), htmlSnap.getFontSize())).append(". ");
-            }
-            if (lineHeightDiff > LINE_HEIGHT_TOLERANCE) {
-                notes.append("Line height ").append(diffString(figmaSnap.getLineHeight(), htmlSnap.getLineHeight())).append(". ");
-            }
-            if (letterSpacingDiff > LETTER_SPACING_TOLERANCE) {
-                notes.append("Letter spacing ").append(diffString(figmaSnap.getLetterSpacing(), htmlSnap.getLetterSpacing())).append(". ");
-            }
+        }
 
-            if (textMatches && fontFamilyMatches && withinFontTolerance) {
-                issue.setStatus("MATCH");
-                issue.setSeverity(SemanticSeverity.PASS);
-                issue.setNotes("Within typography tolerance");
-            } else if (!textMatches || !fontFamilyMatches) {
-                issue.setStatus("MISMATCH");
-                issue.setSeverity(SemanticSeverity.FAIL);
-                issue.setNotes(notes.toString().trim());
-            } else {
-                issue.setStatus("DRIFT");
-                issue.setSeverity(SemanticSeverity.WARN);
-                issue.setNotes(notes.toString().trim());
-            }
-
-            // ignore trivial differences where everything is effectively the same
-            if (!"MATCH".equals(issue.getStatus())) {
-                result.getTextTypography().add(issue);
+        // Identify Extra (HTML ONLY)
+        for (HtmlSemanticSnapshot.TextNode hn : availableHtmlTexts) {
+            if (!matchedHtml.contains(hn)) {
+                SemanticComparisonResult.ExtraElementIssue extra = new SemanticComparisonResult.ExtraElementIssue();
+                extra.setElementId(hn.getId());
+                extra.setText(hn.getText());
+                extra.setTag(hn.getTag());
+                result.getExtraElements().add(extra);
             }
         }
     }
 
-    private void analyzeSectionSizesAndAlignment(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html, SemanticComparisonResult result) {
+    private void compareTypography(FigmaSemanticSnapshot.TextNode ft, HtmlSemanticSnapshot.TextNode ht,
+            SemanticComparisonResult result) {
+        TypographyIssue issue = new TypographyIssue();
+        issue.setElementId(ft.getName() != null ? ft.getName() : ft.getText()); // Use text as ID fallback
+
+        TypographySnapshot figmaSnap = new TypographySnapshot();
+        figmaSnap.setText(normalizeText(ft.getText()));
+        figmaSnap.setFontFamily(safe(ft.getFontFamily()));
+        figmaSnap.setFontSize(ft.getFontSize());
+        figmaSnap.setFontWeight(safe(ft.getFontWeight()));
+        figmaSnap.setLineHeight(ft.getLineHeight());
+        figmaSnap.setLetterSpacing(ft.getLetterSpacing());
+        figmaSnap.setColor(normalizeToHex(ft.getColor()));
+
+        TypographySnapshot htmlSnap = new TypographySnapshot();
+        htmlSnap.setText(normalizeText(ht.getText()));
+        htmlSnap.setFontFamily(safe(ht.getFontFamily()));
+        htmlSnap.setFontSize(ht.getFontSize());
+        htmlSnap.setFontWeight(safe(ht.getFontWeight()));
+        htmlSnap.setLineHeight(ht.getLineHeight());
+        htmlSnap.setLetterSpacing(ht.getLetterSpacing());
+        htmlSnap.setColor(normalizeToHex(ht.getColor()));
+
+        issue.setFigma(figmaSnap);
+        issue.setHtml(htmlSnap);
+
+        boolean textMatches = equalsIgnoreWhitespace(figmaSnap.getText(), htmlSnap.getText());
+        boolean fontFamilyMatches = normalizeFontFamily(figmaSnap.getFontFamily())
+                .equalsIgnoreCase(normalizeFontFamily(htmlSnap.getFontFamily()));
+
+        double fontSizeDiff = Math.abs(figmaSnap.getFontSize() - htmlSnap.getFontSize());
+        double lineHeightDiff = Math.abs(figmaSnap.getLineHeight() - htmlSnap.getLineHeight());
+        double letterSpacingDiff = Math.abs(figmaSnap.getLetterSpacing() - htmlSnap.getLetterSpacing());
+
+        boolean withinFontTolerance = fontSizeDiff <= config.fontSizeTolerance
+                && lineHeightDiff <= config.lineHeightTolerance
+                && letterSpacingDiff <= config.letterSpacingTolerance;
+
+        double colorDeltaE = 0;
+        int[] fRgb = parseColor(figmaSnap.getColor());
+        int[] hRgb = parseColor(htmlSnap.getColor());
+        if (fRgb != null && hRgb != null) {
+            colorDeltaE = deltaE(fRgb, hRgb);
+        }
+        boolean colorMatches = colorDeltaE <= config.colorDeltaEWarn;
+
+        StringBuilder notes = new StringBuilder();
+        if (!textMatches) {
+            notes.append("Text differs. ");
+        }
+        if (!fontFamilyMatches) {
+            notes.append("Font family differs. ");
+        }
+        if (!colorMatches) {
+            notes.append("Color differs (ΔE=").append(Math.round(colorDeltaE)).append("). ");
+        }
+        if (fontSizeDiff > config.fontSizeTolerance) {
+            notes.append("Font size ").append(diffString(figmaSnap.getFontSize(), htmlSnap.getFontSize())).append(". ");
+        }
+        if (lineHeightDiff > config.lineHeightTolerance) {
+            notes.append("Line height ").append(diffString(figmaSnap.getLineHeight(), htmlSnap.getLineHeight()))
+                    .append(". ");
+        }
+        if (letterSpacingDiff > config.letterSpacingTolerance) {
+            notes.append("Letter spacing ")
+                    .append(diffString(figmaSnap.getLetterSpacing(), htmlSnap.getLetterSpacing())).append(". ");
+        }
+
+        if (textMatches && fontFamilyMatches && withinFontTolerance && colorMatches) {
+            issue.setStatus("MATCH");
+            issue.setSeverity(SemanticSeverity.PASS);
+            issue.setNotes("Within typography tolerance");
+        } else if (!textMatches || !fontFamilyMatches || colorDeltaE > config.colorDeltaEFail) {
+            issue.setStatus("MISMATCH");
+            issue.setSeverity(SemanticSeverity.FAIL);
+            issue.setNotes(notes.toString().trim());
+        } else {
+            issue.setStatus("SIZE/SPACING DRIFT");
+            issue.setSeverity(SemanticSeverity.WARN);
+            issue.setNotes(notes.toString().trim());
+        }
+
+        // RECORD EVERYTHING (Audit Log)
+        result.getTextTypography().add(issue);
+    }
+
+    private void analyzeSectionSizesAndAlignment(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html,
+            SemanticComparisonResult result) {
         FigmaSemanticSnapshot.Sections fs = figma.getSections();
         HtmlSemanticSnapshot.Sections hs = html.getSections();
 
@@ -178,7 +308,7 @@ public class SemanticAnalyzer {
     }
 
     private void compareSection(String id, FigmaSemanticSnapshot.Rect figmaRect, HtmlSemanticSnapshot.Rect htmlRect,
-                                String role, SemanticComparisonResult result) {
+            String role, SemanticComparisonResult result) {
         if (figmaRect == null || htmlRect == null) {
             // If one is missing entirely, treat as structural failure
             if (figmaRect != null || htmlRect != null) {
@@ -186,7 +316,20 @@ public class SemanticAnalyzer {
                 es.setElementId(id);
                 es.setRole(role);
                 es.setSeverity(SemanticSeverity.FAIL);
-                es.setNotes("Section present in one layout but missing in the other");
+
+                if (figmaRect != null) {
+                    es.setFigmaWidth(figmaRect.getWidth());
+                    es.setFigmaHeight(figmaRect.getHeight());
+                }
+                if (htmlRect != null) {
+                    es.setHtmlWidth(htmlRect.getWidth());
+                    es.setHtmlHeight(htmlRect.getHeight());
+                }
+
+                String missingSide = figmaRect == null ? "Figma" : "HTML";
+                es.setNotes("Section '" + id + "' found in " + (figmaRect != null ? "Figma" : "HTML") +
+                        " but missing in " + missingSide + ". (Check layer naming)");
+
                 result.getElementSizes().add(es);
             }
             return;
@@ -205,7 +348,7 @@ public class SemanticAnalyzer {
         sizeIssue.setWidthDiffPx(widthDiff);
         sizeIssue.setHeightDiffPx(heightDiff);
 
-        boolean majorSizeDiff = widthDiff > PIXEL_NOISE_THRESHOLD || heightDiff > PIXEL_NOISE_THRESHOLD;
+        boolean majorSizeDiff = widthDiff > config.pixelNoiseThreshold || heightDiff > config.pixelNoiseThreshold;
         if (majorSizeDiff) {
             sizeIssue.setSeverity(SemanticSeverity.WARN);
             sizeIssue.setNotes("Section size drift beyond noise threshold");
@@ -216,27 +359,28 @@ public class SemanticAnalyzer {
         double xDiff = Math.abs(figmaRect.getX() - htmlRect.getX());
         double yDiff = Math.abs(figmaRect.getY() - htmlRect.getY());
 
-        if (xDiff > PIXEL_NOISE_THRESHOLD) {
+        if (xDiff > config.pixelNoiseThreshold) {
             AlignmentIssue ai = new AlignmentIssue();
             ai.setElementId(id);
             ai.setAxis("horizontal");
             ai.setOffsetPx(xDiff);
             ai.setDescription("Horizontal alignment differs for section '" + id + "'");
-            ai.setSeverity(xDiff > SPACING_TOLERANCE ? SemanticSeverity.FAIL : SemanticSeverity.WARN);
+            ai.setSeverity(xDiff > config.spacingTolerance ? SemanticSeverity.FAIL : SemanticSeverity.WARN);
             result.getAlignment().add(ai);
         }
-        if (yDiff > PIXEL_NOISE_THRESHOLD) {
+        if (yDiff > config.pixelNoiseThreshold) {
             AlignmentIssue ai = new AlignmentIssue();
             ai.setElementId(id);
             ai.setAxis("vertical");
             ai.setOffsetPx(yDiff);
             ai.setDescription("Vertical alignment differs for section '" + id + "'");
-            ai.setSeverity(yDiff > SPACING_TOLERANCE ? SemanticSeverity.FAIL : SemanticSeverity.WARN);
+            ai.setSeverity(yDiff > config.spacingTolerance ? SemanticSeverity.FAIL : SemanticSeverity.WARN);
             result.getAlignment().add(ai);
         }
     }
 
-    private void analyzeSectionSpacing(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html, SemanticComparisonResult result) {
+    private void analyzeSectionSpacing(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html,
+            SemanticComparisonResult result) {
         addSpacingIssue("header-hero", "header and hero",
                 figma.getSections().getHeader(), figma.getSections().getHero(),
                 html.getSections().getHeader(), html.getSections().getHero(),
@@ -256,9 +400,9 @@ public class SemanticAnalyzer {
     }
 
     private void addSpacingIssue(String id, String between,
-                                 FigmaSemanticSnapshot.Rect figmaA, FigmaSemanticSnapshot.Rect figmaB,
-                                 HtmlSemanticSnapshot.Rect htmlA, HtmlSemanticSnapshot.Rect htmlB,
-                                 SemanticComparisonResult result) {
+            FigmaSemanticSnapshot.Rect figmaA, FigmaSemanticSnapshot.Rect figmaB,
+            HtmlSemanticSnapshot.Rect htmlA, HtmlSemanticSnapshot.Rect htmlB,
+            SemanticComparisonResult result) {
         if (figmaA == null || figmaB == null || htmlA == null || htmlB == null) {
             return;
         }
@@ -266,7 +410,7 @@ public class SemanticAnalyzer {
         double htmlSpacing = htmlB.getY() - (htmlA.getY() + htmlA.getHeight());
 
         double diff = Math.abs(figmaSpacing - htmlSpacing);
-        if (Math.abs(diff) <= PIXEL_NOISE_THRESHOLD) {
+        if (Math.abs(diff) <= config.pixelNoiseThreshold) {
             return;
         }
 
@@ -277,18 +421,24 @@ public class SemanticAnalyzer {
         si.setHtmlSpacing(htmlSpacing);
         si.setDiffPx(diff);
         si.setNotes("Section spacing differs by " + Math.round(diff) + "px");
-        si.setSeverity(diff > SPACING_TOLERANCE ? SemanticSeverity.WARN : SemanticSeverity.WARN);
+        si.setSeverity(diff > config.spacingTolerance ? SemanticSeverity.WARN : SemanticSeverity.WARN);
 
         result.getSpacing().add(si);
     }
 
-    private void analyzeSectionOrder(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html, SemanticComparisonResult result) {
+    private void analyzeSectionOrder(FigmaSemanticSnapshot figma, HtmlSemanticSnapshot html,
+            SemanticComparisonResult result) {
         List<String> expected = new ArrayList<>();
-        if (figma.getSections().getHeader() != null) expected.add("header");
-        if (figma.getSections().getHero() != null) expected.add("hero");
-        if (figma.getSections().getFeatures() != null) expected.add("features");
-        if (figma.getSections().getCtas() != null) expected.add("ctas");
-        if (figma.getSections().getFooter() != null) expected.add("footer");
+        if (figma.getSections().getHeader() != null)
+            expected.add("header");
+        if (figma.getSections().getHero() != null)
+            expected.add("hero");
+        if (figma.getSections().getFeatures() != null)
+            expected.add("features");
+        if (figma.getSections().getCtas() != null)
+            expected.add("ctas");
+        if (figma.getSections().getFooter() != null)
+            expected.add("footer");
 
         List<SectionWithY> htmlSections = new ArrayList<>();
         if (html.getSections().getHeader() != null) {
@@ -351,7 +501,7 @@ public class SemanticAnalyzer {
         }
         double deltaE = deltaE(figmaRgb, htmlRgb);
 
-        if (deltaE < COLOR_DELTA_E_WARN) {
+        if (deltaE < config.colorDeltaEWarn) {
             return null; // treat as noise
         }
 
@@ -361,33 +511,37 @@ public class SemanticAnalyzer {
         ci.setFigmaColor(toHex(figmaRgb));
         ci.setHtmlColor(toHex(htmlRgb));
         ci.setDeltaE(deltaE);
-        ci.setSeverity(deltaE > COLOR_DELTA_E_FAIL ? SemanticSeverity.FAIL : SemanticSeverity.WARN);
+        ci.setSeverity(deltaE > config.colorDeltaEFail ? SemanticSeverity.FAIL : SemanticSeverity.WARN);
         ci.setNotes("Color difference ΔE ≈ " + Math.round(deltaE));
         return ci;
     }
 
     private int[] parseColor(String hex) {
-        if (hex == null) return null;
+        if (hex == null)
+            return null;
         String s = hex.trim();
-        if (s.startsWith("#")) s = s.substring(1);
+        if (s.startsWith("#"))
+            s = s.substring(1);
         if (s.length() == 3) {
             s = "" + s.charAt(0) + s.charAt(0)
                     + s.charAt(1) + s.charAt(1)
                     + s.charAt(2) + s.charAt(2);
         }
-        if (s.length() != 6) return null;
+        if (s.length() != 6)
+            return null;
         try {
             int r = Integer.parseInt(s.substring(0, 2), 16);
             int g = Integer.parseInt(s.substring(2, 4), 16);
             int b = Integer.parseInt(s.substring(4, 6), 16);
-            return new int[]{r, g, b};
+            return new int[] { r, g, b };
         } catch (NumberFormatException e) {
             return null;
         }
     }
 
     private int[] parseCssColor(String css) {
-        if (css == null) return null;
+        if (css == null)
+            return null;
         String s = css.trim().toLowerCase();
         if (s.startsWith("#")) {
             return parseColor(s);
@@ -395,9 +549,11 @@ public class SemanticAnalyzer {
         if (s.startsWith("rgb")) {
             int start = s.indexOf('(');
             int end = s.indexOf(')');
-            if (start < 0 || end < 0) return null;
+            if (start < 0 || end < 0)
+                return null;
             String[] parts = s.substring(start + 1, end).split(",");
-            if (parts.length < 3) return null;
+            if (parts.length < 3)
+                return null;
             int[] rgb = new int[3];
             for (int i = 0; i < 3; i++) {
                 String p = parts[i].trim();
@@ -411,14 +567,18 @@ public class SemanticAnalyzer {
             return rgb;
         }
         // Basic named colors can be extended; default to null for unknown
-        if ("white".equals(s)) return new int[]{255, 255, 255};
-        if ("black".equals(s)) return new int[]{0, 0, 0};
-        if ("transparent".equals(s)) return null;
+        if ("white".equals(s))
+            return new int[] { 255, 255, 255 };
+        if ("black".equals(s))
+            return new int[] { 0, 0, 0 };
+        if ("transparent".equals(s))
+            return null;
         return null;
     }
 
     private double deltaE(int[] rgb1, int[] rgb2) {
-        // Simple Euclidean distance normalized to approximate ΔE; good enough for small thresholds
+        // Simple Euclidean distance normalized to approximate ΔE; good enough for small
+        // thresholds
         double dr = rgb1[0] - rgb2[0];
         double dg = rgb1[1] - rgb2[1];
         double db = rgb1[2] - rgb2[2];
@@ -437,7 +597,8 @@ public class SemanticAnalyzer {
     }
 
     private String normalizeText(String text) {
-        if (text == null) return "";
+        if (text == null)
+            return "";
         return text.trim().replaceAll("\\s+", " ");
     }
 
@@ -450,7 +611,8 @@ public class SemanticAnalyzer {
     }
 
     private String normalizeFontFamily(String family) {
-        if (family == null) return "";
+        if (family == null)
+            return "";
         String f = family.toLowerCase();
         // strip quotes and fallbacks (keep primary family)
         int comma = f.indexOf(',');
@@ -465,5 +627,13 @@ public class SemanticAnalyzer {
         String sign = diff > 0 ? "+" : "";
         return sign + Math.round(diff) + "px";
     }
-}
 
+    private String normalizeToHex(String color) {
+        if (color == null || color.isEmpty())
+            return "";
+        int[] rgb = parseCssColor(color);
+        if (rgb == null)
+            return color;
+        return toHex(rgb);
+    }
+}

@@ -11,11 +11,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Parses the exported figma_structure.json file into a simplified semantic snapshot.
- * This focuses on:
- * - Frame dimensions
- * - Major sections (header, hero, features, CTAs, footer) based on layer names
- * - Ordered text nodes with typography information
+ * Parses the Figma Node Tree (JSON) into a semantic snapshot.
  */
 public class FigmaSemanticExtractor {
 
@@ -23,39 +19,35 @@ public class FigmaSemanticExtractor {
 
     public FigmaSemanticSnapshot loadFromFile(File figmaStructureFile) {
         try {
-            // figma_structure.json may be UTF-16 encoded – normalize to UTF-8 string first
+            // Support legacy file loading for mock/debug
             byte[] raw = readAllBytes(figmaStructureFile);
             String content = new String(raw, detectEncoding(raw));
-
             JsonNode root = objectMapper.readTree(content);
-            return fromJson(root);
+            return extract(root);
         } catch (Exception e) {
             throw new RuntimeException("Failed to load Figma structure from " + figmaStructureFile, e);
         }
     }
 
-    private byte[] readAllBytes(File file) throws Exception {
-        try (FileInputStream in = new FileInputStream(file)) {
-            return in.readAllBytes();
-        }
-    }
-
-    private java.nio.charset.Charset detectEncoding(byte[] data) {
-        if (data.length >= 2) {
-            // UTF-16 LE BOM 0xFF 0xFE, UTF-16 BE 0xFE 0xFF
-            if ((data[0] == (byte) 0xFF && data[1] == (byte) 0xFE)
-                    || (data[0] == (byte) 0xFE && data[1] == (byte) 0xFF)) {
-                return StandardCharsets.UTF_16;
-            }
-        }
-        return StandardCharsets.UTF_8;
-    }
-
-    private FigmaSemanticSnapshot fromJson(JsonNode root) {
+    public FigmaSemanticSnapshot extract(JsonNode root) {
         FigmaSemanticSnapshot snapshot = new FigmaSemanticSnapshot();
 
-        // Find the first FRAME node (e.g. "Home") and treat it as the main frame
-        JsonNode frameNode = findFirstByType(root, "FRAME");
+        // Handle /nodes endpoint response wrapper
+        if (root.has("nodes")) {
+            JsonNode nodes = root.get("nodes");
+            if (nodes.isObject()) {
+                Iterator<JsonNode> elements = nodes.elements();
+                if (elements.hasNext()) {
+                    JsonNode nodeData = elements.next();
+                    if (nodeData.has("document")) {
+                        root = nodeData.get("document");
+                    }
+                }
+            }
+        }
+
+        // Find the first FRAME/COMPONENT/INSTANCE node to treat as the main frame
+        JsonNode frameNode = findFirstFrame(root);
         if (frameNode != null) {
             JsonNode box = frameNode.get("absoluteBoundingBox");
             if (box != null) {
@@ -78,23 +70,45 @@ public class FigmaSemanticExtractor {
                 return cmpY != 0 ? cmpY : Double.compare(a.getX(), b.getX());
             });
             snapshot.setTextNodes(textNodes);
+
+            // Interactive nodes
+            List<FigmaSemanticSnapshot.InteractiveNode> interactiveNodes = new ArrayList<>();
+            collectInteractiveNodes(frameNode, interactiveNodes);
+            snapshot.setInteractiveNodes(interactiveNodes);
         }
 
         return snapshot;
     }
 
-    private JsonNode findFirstByType(JsonNode root, String type) {
-        if (root == null) return null;
-        if (type.equalsIgnoreCase(root.path("type").asText())) {
+    private byte[] readAllBytes(File file) throws Exception {
+        try (FileInputStream in = new FileInputStream(file)) {
+            return in.readAllBytes();
+        }
+    }
+
+    private java.nio.charset.Charset detectEncoding(byte[] data) {
+        if (data.length >= 2) {
+            if ((data[0] == (byte) 0xFF && data[1] == (byte) 0xFE)
+                    || (data[0] == (byte) 0xFE && data[1] == (byte) 0xFF)) {
+                return StandardCharsets.UTF_16;
+            }
+        }
+        return StandardCharsets.UTF_8;
+    }
+
+    private JsonNode findFirstFrame(JsonNode root) {
+        if (root == null)
+            return null;
+        String type = root.path("type").asText("");
+        if ("FRAME".equals(type) || "COMPONENT".equals(type) || "INSTANCE".equals(type)) {
             return root;
         }
         JsonNode children = root.get("children");
         if (children != null && children.isArray()) {
             for (JsonNode child : children) {
-                JsonNode found = findFirstByType(child, type);
-                if (found != null) {
+                JsonNode found = findFirstFrame(child);
+                if (found != null)
                     return found;
-                }
             }
         }
         return null;
@@ -102,18 +116,23 @@ public class FigmaSemanticExtractor {
 
     private FigmaSemanticSnapshot.Rect findSectionRect(JsonNode frameNode, String nameContains) {
         JsonNode match = findByName(frameNode, nameContains);
-        if (match == null) {
+        if (match == null)
             return null;
-        }
         JsonNode box = match.get("absoluteBoundingBox");
-        if (box == null) {
+        if (box == null)
             return null;
-        }
+
         FigmaSemanticSnapshot.Rect rect = new FigmaSemanticSnapshot.Rect();
         rect.setX(box.path("x").asDouble(0));
         rect.setY(box.path("y").asDouble(0));
         rect.setWidth(box.path("width").asDouble(0));
         rect.setHeight(box.path("height").asDouble(0));
+
+        rect.setPaddingLeft(match.path("paddingLeft").asDouble(0));
+        rect.setPaddingRight(match.path("paddingRight").asDouble(0));
+        rect.setPaddingTop(match.path("paddingTop").asDouble(0));
+        rect.setPaddingBottom(match.path("paddingBottom").asDouble(0));
+        rect.setItemSpacing(match.path("itemSpacing").asDouble(0));
         return rect;
     }
 
@@ -129,75 +148,180 @@ public class FigmaSemanticExtractor {
         if (children != null && children.isArray()) {
             for (JsonNode child : children) {
                 JsonNode found = findByName(child, nameContains);
-                if (found != null) return found;
+                if (found != null)
+                    return found;
             }
         }
         return null;
     }
 
     private void collectTextNodes(JsonNode root, List<FigmaSemanticSnapshot.TextNode> out) {
-        if (root == null) return;
-        if ("TEXT".equalsIgnoreCase(root.path("type").asText())) {
-            FigmaSemanticSnapshot.TextNode tn = new FigmaSemanticSnapshot.TextNode();
-            tn.setId(root.path("id").asText(null));
-            tn.setName(root.path("name").asText(null));
-            tn.setText(root.path("characters").asText(null));
+        collectTextNodes(root, out, null);
+    }
 
-            JsonNode box = root.get("absoluteBoundingBox");
-            if (box != null) {
-                tn.setX(box.path("x").asDouble(0));
-                tn.setY(box.path("y").asDouble(0));
-            }
+    private void collectTextNodes(JsonNode root, List<FigmaSemanticSnapshot.TextNode> out, String parentId) {
+        if (root == null)
+            return;
 
-            JsonNode style = root.get("style");
-            if (style != null) {
-                if (style.isObject()) {
-                    // Standard Figma REST shape
-                    tn.setFontFamily(style.path("fontFamily").asText(null));
-                    tn.setFontSize(style.path("fontSize").asDouble(0));
-                    tn.setFontWeight(style.path("fontWeight").asText(null));
-                    // Prefer pixel line height if present
-                    if (style.has("lineHeightPx")) {
-                        tn.setLineHeight(style.path("lineHeightPx").asDouble(0));
-                    } else if (style.has("lineHeightPercentFontSize")) {
-                        double percent = style.path("lineHeightPercentFontSize").asDouble(0);
-                        double size = tn.getFontSize();
-                        tn.setLineHeight(size > 0 ? size * percent / 100.0 : 0);
-                    }
+        String id = root.path("id").asText();
+        String type = root.path("type").asText();
+
+        if ("TEXT".equalsIgnoreCase(type)) {
+            if (root.path("visible").asBoolean(true)) {
+                FigmaSemanticSnapshot.TextNode tn = new FigmaSemanticSnapshot.TextNode();
+                tn.setId(id);
+                tn.setName(root.path("name").asText());
+                tn.setText(root.path("characters").asText());
+                tn.setParentId(parentId);
+                tn.setType(type);
+
+                JsonNode box = root.get("absoluteBoundingBox");
+                if (box != null) {
+                    tn.setX(box.path("x").asDouble(0));
+                    tn.setY(box.path("y").asDouble(0));
+                }
+
+                JsonNode style = root.get("style");
+                if (style != null) {
+                    tn.setFontFamily(style.path("fontFamily").asText());
+                    tn.setFontWeight(String.valueOf(style.path("fontWeight").asInt(400)));
+                    tn.setFontSize(style.path("fontSize").asDouble(16));
                     tn.setLetterSpacing(style.path("letterSpacing").asDouble(0));
-                } else if (style.isTextual()) {
-                    // Your figma_structure.json encodes style as a serialized map string, e.g.:
-                    // "@{fontFamily=Montserrat; fontSize=16.0; fontWeight=400; lineHeightPx=19.5; letterSpacing=0.0}"
-                    applyStyleString(style.asText(), tn);
-                }
-            }
 
-            JsonNode fills = root.get("fills");
-            if (fills != null && fills.isArray()) {
-                Iterator<JsonNode> it = fills.elements();
-                while (it.hasNext()) {
-                    JsonNode f = it.next();
-                    if (!"SOLID".equalsIgnoreCase(f.path("type").asText())) continue;
-                    JsonNode color = f.get("color");
-                    if (color != null) {
-                        double r = color.path("r").asDouble(0);
-                        double g = color.path("g").asDouble(0);
-                        double b = color.path("b").asDouble(0);
-                        tn.setColor(rgbToHex(r, g, b));
-                        break;
+                    if (style.has("lineHeightPx")) {
+                        tn.setLineHeight(style.path("lineHeightPx").asDouble());
+                    } else if (style.has("lineHeightPercentFontSize")) {
+                        tn.setLineHeight(tn.getFontSize() * style.path("lineHeightPercentFontSize").asDouble() / 100.0);
                     }
                 }
-            }
 
-            out.add(tn);
+                // Color from fills
+                tn.setColor(extractColorFromFills(root.get("fills")));
+
+                out.add(tn);
+            }
         }
 
         JsonNode children = root.get("children");
         if (children != null && children.isArray()) {
             for (JsonNode child : children) {
-                collectTextNodes(child, out);
+                collectTextNodes(child, out, id);
             }
         }
+    }
+
+    private void collectInteractiveNodes(JsonNode root, List<FigmaSemanticSnapshot.InteractiveNode> out) {
+        collectInteractiveNodes(root, out, null);
+    }
+
+    private void collectInteractiveNodes(JsonNode root, List<FigmaSemanticSnapshot.InteractiveNode> out,
+            String parentId) {
+        if (root == null)
+            return;
+
+        String id = root.path("id").asText();
+
+        if (isInteractiveCandidate(root)) {
+            FigmaSemanticSnapshot.InteractiveNode node = extractInteractiveNode(root, parentId);
+            if (node != null) {
+                out.add(node);
+            }
+        }
+
+        JsonNode children = root.get("children");
+        if (children != null && children.isArray()) {
+            for (JsonNode child : children) {
+                collectInteractiveNodes(child, out, id);
+            }
+        }
+    }
+
+    private boolean isInteractiveCandidate(JsonNode node) {
+        String type = node.path("type").asText("");
+        return "FRAME".equals(type) || "GROUP".equals(type) || "INSTANCE".equals(type) || "COMPONENT".equals(type);
+    }
+
+    private FigmaSemanticSnapshot.InteractiveNode extractInteractiveNode(JsonNode node, String parentId) {
+        String textLabel = findFirstTextContent(node);
+        if (textLabel == null || textLabel.isEmpty()) {
+            return null;
+        }
+
+        FigmaSemanticSnapshot.InteractiveNode in = new FigmaSemanticSnapshot.InteractiveNode();
+        in.setId(node.path("id").asText());
+        in.setName(node.path("name").asText());
+        in.setText(textLabel);
+        in.setParentId(parentId);
+        in.setType(node.path("type").asText());
+
+        JsonNode box = node.get("absoluteBoundingBox");
+        if (box != null) {
+            FigmaSemanticSnapshot.Rect r = new FigmaSemanticSnapshot.Rect();
+            r.setX(box.path("x").asDouble(0));
+            r.setY(box.path("y").asDouble(0));
+            r.setWidth(box.path("width").asDouble(0));
+            r.setHeight(box.path("height").asDouble(0));
+
+            r.setPaddingLeft(node.path("paddingLeft").asDouble(0));
+            r.setPaddingRight(node.path("paddingRight").asDouble(0));
+            r.setPaddingTop(node.path("paddingTop").asDouble(0));
+            r.setPaddingBottom(node.path("paddingBottom").asDouble(0));
+            r.setItemSpacing(node.path("itemSpacing").asDouble(0));
+
+            in.setRect(r);
+        }
+
+        in.setBackgroundColor(extractBackgroundColor(node));
+        in.setCornerRadius(node.path("cornerRadius").asDouble(0));
+        return in;
+    }
+
+    private String findFirstTextContent(JsonNode node) {
+        if ("TEXT".equalsIgnoreCase(node.path("type").asText())) {
+            return node.path("characters").asText("");
+        }
+        JsonNode children = node.get("children");
+        if (children != null && children.isArray()) {
+            for (JsonNode child : children) {
+                String text = findFirstTextContent(child);
+                if (text != null && !text.isEmpty())
+                    return text;
+            }
+        }
+        return null;
+    }
+
+    private String extractBackgroundColor(JsonNode node) {
+        String color = extractColorFromFills(node.get("fills"));
+        if (color != null)
+            return color;
+
+        JsonNode children = node.get("children");
+        if (children != null && children.isArray()) {
+            for (JsonNode child : children) {
+                String type = child.path("type").asText("");
+                if ("RECTANGLE".equals(type) || "ELLIPSE".equals(type)) {
+                    String bg = extractColorFromFills(child.get("fills"));
+                    if (bg != null)
+                        return bg;
+                }
+            }
+        }
+        return null;
+    }
+
+    private String extractColorFromFills(JsonNode fills) {
+        if (fills != null && fills.isArray()) {
+            for (JsonNode f : fills) {
+                if ("SOLID".equalsIgnoreCase(f.path("type").asText()) && f.path("visible").asBoolean(true)) {
+                    JsonNode c = f.get("color");
+                    if (c != null) {
+                        return rgbToHex(c.path("r").asDouble(), c.path("g").asDouble(), c.path("b").asDouble());
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private String rgbToHex(double r, double g, double b) {
@@ -210,89 +334,4 @@ public class FigmaSemanticExtractor {
     private int clamp(int v, int min, int max) {
         return Math.max(min, Math.min(max, v));
     }
-
-    /**
-     * Parses Figma desktop-export style strings like:
-     * "@{fontFamily=Montserrat; fontPostScriptName=Montserrat-Regular; fontStyle=Regular; fontWeight=400; fontSize=16.0; lineHeightPx=19.5; letterSpacing=0.0}"
-     * into the TextNode typography fields.
-     */
-    private void applyStyleString(String styleString, FigmaSemanticSnapshot.TextNode tn) {
-        if (styleString == null) return;
-        String s = styleString.trim();
-        if (s.startsWith("@{") && s.endsWith("}")) {
-            s = s.substring(2, s.length() - 1);
-        }
-        if (s.isEmpty()) return;
-
-        String[] parts = s.split(";");
-        String fontFamily = null;
-        String fontWeight = null;
-        Double fontSize = null;
-        Double lineHeightPx = null;
-        Double lineHeightPercent = null;
-        Double letterSpacing = null;
-
-        for (String part : parts) {
-            String p = part.trim();
-            if (p.isEmpty()) continue;
-            int eq = p.indexOf('=');
-            if (eq <= 0) continue;
-            String key = p.substring(0, eq).trim();
-            String value = p.substring(eq + 1).trim();
-
-            switch (key) {
-                case "fontFamily":
-                    fontFamily = value;
-                    break;
-                case "fontWeight":
-                    fontWeight = value;
-                    break;
-                case "fontSize":
-                    fontSize = parseDoubleSafe(value);
-                    break;
-                case "lineHeightPx":
-                    lineHeightPx = parseDoubleSafe(value);
-                    break;
-                case "lineHeightPercent":
-                case "lineHeightPercentFontSize":
-                    lineHeightPercent = parseDoubleSafe(value);
-                    break;
-                case "letterSpacing":
-                    letterSpacing = parseDoubleSafe(value);
-                    break;
-                default:
-                    // ignore others
-                    break;
-            }
-        }
-
-        if (fontFamily != null) {
-            tn.setFontFamily(fontFamily);
-        }
-        if (fontWeight != null) {
-            tn.setFontWeight(fontWeight);
-        }
-        if (fontSize != null) {
-            tn.setFontSize(fontSize);
-        }
-        if (letterSpacing != null) {
-            tn.setLetterSpacing(letterSpacing);
-        }
-
-        // Prefer absolute line height if available; otherwise compute from percent of font size
-        if (lineHeightPx != null) {
-            tn.setLineHeight(lineHeightPx);
-        } else if (lineHeightPercent != null && fontSize != null && fontSize > 0) {
-            tn.setLineHeight(fontSize * lineHeightPercent / 100.0);
-        }
-    }
-
-    private Double parseDoubleSafe(String value) {
-        try {
-            return Double.parseDouble(value);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
 }
-

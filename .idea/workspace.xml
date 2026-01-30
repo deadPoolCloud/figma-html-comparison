@@ -4,16 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cd3059c2-67cd-45e4-afb3-21beecb5fc47" name="Changes" comment="Updated Final AnimUpdated Selenium wait strategy to avoid TimeoutException during captureation Logic">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/debug_images/web_screenshot.png" beforeDir="false" afterPath="$PROJECT_DIR$/debug_images/web_screenshot.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/figma_frame.png" beforeDir="false" afterPath="$PROJECT_DIR$/figma_frame.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/mirror/capture/SeleniumCaptureService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/mirror/capture/SeleniumCaptureService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/mirror/cli/VisualComparisonCLI.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/mirror/cli/VisualComparisonCLI.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/mirror/model/Viewport.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/mirror/model/Viewport.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/mirror/orchestrator/CompareController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/mirror/orchestrator/CompareController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/mirror/orchestrator/ComparisonOrchestrator.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/mirror/orchestrator/ComparisonOrchestrator.java" afterDir="false" />
+    <list default="true" id="cd3059c2-67cd-45e4-afb3-21beecb5fc47" name="Changes" comment="Implemented logic to reduce mismatches.">
+      <change afterPath="$PROJECT_DIR$/cache/figma/ZJdPEydWWHl3fbcuR3yUY2/1-4.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -144,7 +136,23 @@
       <option name="project" value="LOCAL" />
       <updated>1769507094969</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Implemented Semantic Comparison">
+      <option name="closed" value="true" />
+      <created>1769522479035</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1769522479035</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Implemented logic to reduce mismatches.">
+      <option name="closed" value="true" />
+      <created>1769760622835</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1769760622836</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -162,6 +170,8 @@
     <MESSAGE value="Implemented FigmaMock Service to avoid 429" />
     <MESSAGE value="Updated Final Animation Logic" />
     <MESSAGE value="Updated Final AnimUpdated Selenium wait strategy to avoid TimeoutException during captureation Logic" />
-    <option name="LAST_COMMIT_MESSAGE" value="Updated Final AnimUpdated Selenium wait strategy to avoid TimeoutException during captureation Logic" />
+    <MESSAGE value="Implemented Semantic Comparison" />
+    <MESSAGE value="Implemented logic to reduce mismatches." />
+    <option name="LAST_COMMIT_MESSAGE" value="Implemented logic to reduce mismatches." />
   </component>
 </project>

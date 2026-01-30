@@ -7,7 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * High-level, semantic comparison result between Figma design and HTML implementation.
+ * High-level, semantic comparison result between Figma design and HTML
+ * implementation.
  * This intentionally ignores pixel-level noise and focuses on design intent.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -36,6 +37,12 @@ public class SemanticComparisonResult {
 
     @JsonProperty("summary")
     private SemanticSummary summary = new SemanticSummary();
+
+    @JsonProperty("missing_elements")
+    private List<MissingElementIssue> missingElements = new ArrayList<>();
+
+    @JsonProperty("extra_elements")
+    private List<ExtraElementIssue> extraElements = new ArrayList<>();
 
     public ScreenDimensionsResult getScreenDimensions() {
         return screenDimensions;
@@ -73,18 +80,29 @@ public class SemanticComparisonResult {
         return summary;
     }
 
+    public List<MissingElementIssue> getMissingElements() {
+        return missingElements;
+    }
+
+    public List<ExtraElementIssue> getExtraElements() {
+        return extraElements;
+    }
+
     /**
      * Computes summary totals and overall severity from individual issue lists.
      */
     public void finalizeSummary() {
-        int totalIssues =
-                size(textTypography) +
+        int totalIssues = countIssues(textTypography) +
                 size(elementSizes) +
                 size(alignment) +
                 size(order) +
                 size(colors) +
-                size(spacing);
+                size(spacing) +
+                size(missingElements) +
+                size(extraElements);
+
         summary.setTotalIssues(totalIssues);
+        summary.setTotalElementsAudited(size(textTypography));
 
         SemanticSeverity overall = SemanticSeverity.PASS;
 
@@ -95,6 +113,8 @@ public class SemanticComparisonResult {
                 || hasSeverity(order, SemanticSeverity.FAIL)
                 || hasSeverity(colors, SemanticSeverity.FAIL)
                 || hasSeverity(spacing, SemanticSeverity.FAIL)
+                || hasSeverity(missingElements, SemanticSeverity.FAIL)
+                || hasSeverity(extraElements, SemanticSeverity.FAIL)
                 || (screenDimensions != null && screenDimensions.getSeverity() == SemanticSeverity.FAIL)) {
             overall = SemanticSeverity.FAIL;
         } else if (totalIssues > 0
@@ -106,12 +126,25 @@ public class SemanticComparisonResult {
         summary.setSeverity(overall);
     }
 
+    private int countIssues(List<? extends SemanticIssue> issues) {
+        if (issues == null)
+            return 0;
+        int count = 0;
+        for (SemanticIssue issue : issues) {
+            if (issue.getSeverity() != SemanticSeverity.PASS) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private int size(List<?> list) {
         return list == null ? 0 : list.size();
     }
 
     private boolean hasSeverity(List<? extends SemanticIssue> issues, SemanticSeverity severity) {
-        if (issues == null) return false;
+        if (issues == null)
+            return false;
         for (SemanticIssue issue : issues) {
             if (issue.getSeverity() == severity) {
                 return true;
@@ -141,12 +174,23 @@ public class SemanticComparisonResult {
         @JsonProperty("severity")
         private SemanticSeverity severity = SemanticSeverity.PASS;
 
+        @JsonProperty("total_elements_audited")
+        private int totalElementsAudited;
+
         public int getTotalIssues() {
             return totalIssues;
         }
 
         public void setTotalIssues(int totalIssues) {
             this.totalIssues = totalIssues;
+        }
+
+        public int getTotalElementsAudited() {
+            return totalElementsAudited;
+        }
+
+        public void setTotalElementsAudited(int totalElementsAudited) {
+            this.totalElementsAudited = totalElementsAudited;
         }
 
         public SemanticSeverity getSeverity() {
@@ -800,5 +844,94 @@ public class SemanticComparisonResult {
             this.notes = notes;
         }
     }
-}
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class MissingElementIssue implements SemanticIssue {
+        @JsonProperty("element_id")
+        private String elementId;
+        @JsonProperty("text")
+        private String text;
+        @JsonProperty("type")
+        private String type; // text, interactive, section
+        @JsonProperty("severity")
+        private SemanticSeverity severity = SemanticSeverity.FAIL;
+
+        @Override
+        public SemanticSeverity getSeverity() {
+            return severity;
+        }
+
+        public void setSeverity(SemanticSeverity severity) {
+            this.severity = severity;
+        }
+
+        public String getElementId() {
+            return elementId;
+        }
+
+        public void setElementId(String elementId) {
+            this.elementId = elementId;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public void setText(String text) {
+            this.text = text;
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class ExtraElementIssue implements SemanticIssue {
+        @JsonProperty("element_id")
+        private String elementId;
+        @JsonProperty("text")
+        private String text;
+        @JsonProperty("tag")
+        private String tag;
+        @JsonProperty("severity")
+        private SemanticSeverity severity = SemanticSeverity.WARN;
+
+        @Override
+        public SemanticSeverity getSeverity() {
+            return severity;
+        }
+
+        public void setSeverity(SemanticSeverity severity) {
+            this.severity = severity;
+        }
+
+        public String getElementId() {
+            return elementId;
+        }
+
+        public void setElementId(String elementId) {
+            this.elementId = elementId;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public void setText(String text) {
+            this.text = text;
+        }
+
+        public String getTag() {
+            return tag;
+        }
+
+        public void setTag(String tag) {
+            this.tag = tag;
+        }
+    }
+}

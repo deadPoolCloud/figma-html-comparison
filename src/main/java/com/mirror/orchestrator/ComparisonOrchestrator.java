@@ -1,9 +1,9 @@
 package com.mirror.orchestrator;
 
-import com.mirror.capture.SeleniumCaptureService;
+import com.mirror.capture.PlaywrightCaptureService;
 import com.mirror.capture.WebCaptureService;
 import com.mirror.figma.FigmaService;
-import com.mirror.figma.FigmaServiceMock;
+import com.mirror.figma.FigmaServiceImpl;
 import com.mirror.image.ImageAligner;
 import com.mirror.image.OpenCvDiffEngine;
 import com.mirror.image.VisualDiffEngine;
@@ -11,33 +11,34 @@ import com.mirror.model.DiffResult;
 import com.mirror.model.SemanticComparisonResult;
 import com.mirror.model.Viewport;
 import com.mirror.report.HtmlReportService;
+import com.mirror.report.JsonReportService;
 import com.mirror.report.ReportService;
 import com.mirror.semantic.FigmaSemanticExtractor;
 import com.mirror.semantic.FigmaSemanticSnapshot;
-import com.mirror.semantic.HtmlSemanticExtractor;
 import com.mirror.semantic.HtmlSemanticSnapshot;
 import com.mirror.semantic.SemanticAnalyzer;
 
 import java.awt.image.BufferedImage;
-import java.io.File;
 
 /**
  * Orchestrates the entire visual comparison workflow
  */
 public class ComparisonOrchestrator {
 
-    private final WebCaptureService webCapture = new SeleniumCaptureService();
-    private final FigmaService figmaService = new FigmaServiceMock(); // CHANGED: Using mock to avoid API rate limit
+    private final WebCaptureService webCapture = new PlaywrightCaptureService();
+    private final FigmaService figmaService = new FigmaServiceImpl(); // CHANGED: Using real API to support dynamic file
+                                                                      // IDs
     private final VisualDiffEngine diffEngine = new OpenCvDiffEngine();
-    private final ReportService reportService = new HtmlReportService(); // Use HTML report
-    private final HtmlSemanticExtractor htmlSemanticExtractor = new HtmlSemanticExtractor();
+    private final ReportService htmlReport = new HtmlReportService();
+    private final ReportService jsonReport = new JsonReportService();
     private final FigmaSemanticExtractor figmaSemanticExtractor = new FigmaSemanticExtractor();
     private final SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
 
     /**
      * Compares Figma design with live HTML page
-     * @param url Web URL to compare
-     * @param figmaFile Figma File ID
+     * 
+     * @param url        Web URL to compare
+     * @param figmaFile  Figma File ID
      * @param figmaFrame Figma Node ID
      * @return DiffResult with comparison results
      */
@@ -47,10 +48,11 @@ public class ComparisonOrchestrator {
 
     /**
      * Compares Figma design with live HTML page for a specific viewport
-     * @param url Web URL to compare
-     * @param figmaFile Figma File ID
+     * 
+     * @param url        Web URL to compare
+     * @param figmaFile  Figma File ID
      * @param figmaFrame Figma Node ID
-     * @param viewport Viewport size (Desktop/Tablet/Mobile)
+     * @param viewport   Viewport size (Desktop/Tablet/Mobile)
      * @return DiffResult with comparison results
      */
     public DiffResult compare(String url, String figmaFile, String figmaFrame, Viewport viewport) {
@@ -77,9 +79,10 @@ public class ComparisonOrchestrator {
         System.out.println("Comparing images pixel-to-pixel...");
         DiffResult result = diffEngine.compare(figma, aligned);
 
-        // 5. Generate HTML report
-        System.out.println("Generating HTML report...");
-        reportService.generate(result);
+        // 5. Generate reports
+        System.out.println("Generating reports...");
+        htmlReport.generate(result);
+        jsonReport.generate(result);
 
         // Print summary
         System.out.println("\n=== Comparison Complete ===");
@@ -93,24 +96,29 @@ public class ComparisonOrchestrator {
 
     /**
      * Performs semantic (non pixel-based) comparison and returns a JSON-ready
-     * semantic result, while still generating the legacy pixel/HTML report for debugging.
+     * semantic result.
+     * 
+     * @param includePixelComparison If true, also runs visual pixel comparison.
      */
-    public SemanticComparisonResult compareSemantic(String url, String figmaFile, String figmaFrame, Viewport viewport) {
-        // Preserve existing behaviour: still run pixel comparison and HTML report
-        compare(url, figmaFile, figmaFrame, viewport);
+    public SemanticComparisonResult compareSemantic(String url, String figmaFile, String figmaFrame,
+            Viewport viewport, boolean includePixelComparison) {
+
+        if (includePixelComparison) {
+            // Preserve existing behaviour: still run pixel comparison and HTML report
+            compare(url, figmaFile, figmaFrame, viewport);
+        } else {
+            System.out.println("Skipping pixel-to-pixel comparison (Semantic Mode only).");
+        }
 
         System.out.println("\nStarting semantic comparison (layout, typography, spacing)...");
 
         // 1. Capture semantic HTML snapshot
-        HtmlSemanticSnapshot htmlSnapshot = htmlSemanticExtractor.capture(url, viewport);
+        HtmlSemanticSnapshot htmlSnapshot = webCapture.captureSemantic(url, viewport);
 
-        // 2. Load semantic Figma snapshot from local figma_structure.json
-        File figmaStructure = new File("figma_structure.json");
-        if (!figmaStructure.exists()) {
-            throw new RuntimeException("figma_structure.json not found in project root. " +
-                    "Export Figma structure JSON to enable semantic comparison.");
-        }
-        FigmaSemanticSnapshot figmaSnapshot = figmaSemanticExtractor.loadFromFile(figmaStructure);
+        // 2. Fetch semantic structure from Figma API
+        // File figmaStructure = new File("figma_structure.json"); // REMOVED
+        com.fasterxml.jackson.databind.JsonNode figmaJson = figmaService.getStructure(figmaFile, figmaFrame);
+        FigmaSemanticSnapshot figmaSnapshot = figmaSemanticExtractor.extract(figmaJson);
 
         // 3. Analyze semantically
         SemanticComparisonResult semanticResult = semanticAnalyzer.analyze(figmaSnapshot, htmlSnapshot);
@@ -119,6 +127,19 @@ public class ComparisonOrchestrator {
         System.out.println("Total semantic issues: " + semanticResult.getSummary().getTotalIssues());
         System.out.println("Semantic severity: " + semanticResult.getSummary().getSeverity());
 
+        // Generate reports
+        htmlReport.generate(semanticResult);
+        jsonReport.generate(semanticResult);
+
         return semanticResult;
+    }
+
+    /**
+     * Legacy overload for backward compatibility (defaults to including pixel
+     * comparison)
+     */
+    public SemanticComparisonResult compareSemantic(String url, String figmaFile, String figmaFrame,
+            Viewport viewport) {
+        return compareSemantic(url, figmaFile, figmaFrame, viewport, true);
     }
 }

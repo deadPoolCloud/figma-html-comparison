@@ -186,6 +186,108 @@ public class HtmlSemanticSnapshot {
         }
     }
 
+    @JsonProperty("interactive_elements")
+    private List<InteractiveElement> interactiveElements = new ArrayList<>();
+
+    public List<InteractiveElement> getInteractiveElements() {
+        return interactiveElements;
+    }
+
+    public void setInteractiveElements(List<InteractiveElement> interactiveElements) {
+        this.interactiveElements = interactiveElements;
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public static class InteractiveElement {
+        @JsonProperty("text")
+        private String text;
+
+        @JsonProperty("tag")
+        private String tag;
+
+        @JsonProperty("rect")
+        private Rect rect;
+
+        @JsonProperty("background_color")
+        private String backgroundColor;
+
+        @JsonProperty("border_radius")
+        private String borderRadius;
+
+        @JsonProperty("padding")
+        private String padding;
+
+        @JsonProperty("color")
+        private String color;
+
+        @JsonProperty("parent_id")
+        private String parentId;
+
+        public String getText() {
+            return text;
+        }
+
+        public void setText(String text) {
+            this.text = text;
+        }
+
+        public String getTag() {
+            return tag;
+        }
+
+        public void setTag(String tag) {
+            this.tag = tag;
+        }
+
+        public Rect getRect() {
+            return rect;
+        }
+
+        public void setRect(Rect rect) {
+            this.rect = rect;
+        }
+
+        public String getBackgroundColor() {
+            return backgroundColor;
+        }
+
+        public void setBackgroundColor(String backgroundColor) {
+            this.backgroundColor = backgroundColor;
+        }
+
+        public String getBorderRadius() {
+            return borderRadius;
+        }
+
+        public void setBorderRadius(String borderRadius) {
+            this.borderRadius = borderRadius;
+        }
+
+        public String getPadding() {
+            return padding;
+        }
+
+        public void setPadding(String padding) {
+            this.padding = padding;
+        }
+
+        public String getColor() {
+            return color;
+        }
+
+        public void setColor(String color) {
+            this.color = color;
+        }
+
+        public String getParentId() {
+            return parentId;
+        }
+
+        public void setParentId(String parentId) {
+            this.parentId = parentId;
+        }
+    }
+
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class TextNode {
 
@@ -221,6 +323,9 @@ public class HtmlSemanticSnapshot {
 
         @JsonProperty("color")
         private String color;
+
+        @JsonProperty("parent_id")
+        private String parentId;
 
         public String getId() {
             return id;
@@ -309,6 +414,13 @@ public class HtmlSemanticSnapshot {
         public void setColor(String color) {
             this.color = color;
         }
+
+        public String getParentId() {
+            return parentId;
+        }
+
+        public void setParentId(String parentId) {
+            this.parentId = parentId;
+        }
     }
 }
-

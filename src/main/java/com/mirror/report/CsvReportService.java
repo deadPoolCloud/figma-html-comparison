@@ -25,7 +25,7 @@ public class CsvReportService implements ReportService {
             // Write CSV
             FileWriter writer = new FileWriter(OUTPUT_DIR + "report.csv");
             CSVPrinter csv = new CSVPrinter(writer,
-                    CSVFormat.DEFAULT.withHeader("X","Y","Width","Height","Impact%"));
+                    CSVFormat.DEFAULT.withHeader("X", "Y", "Width", "Height", "Impact%"));
 
             for (DiffRegion r : result.getRegions()) {
                 csv.printRecord(r.getX(), r.getY(),
@@ -39,5 +39,10 @@ public class CsvReportService implements ReportService {
         } catch (IOException e) {
             throw new RuntimeException("Failed to generate report", e);
         }
+    }
+
+    @Override
+    public void generate(com.mirror.model.SemanticComparisonResult result) {
+        // Not implemented for CSV yet
     }
 }

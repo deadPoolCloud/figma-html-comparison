@@ -18,11 +18,13 @@ public class CompareController {
 
     @PostMapping("/compare")
     public SemanticComparisonResult compare(@RequestParam String url,
-                                            @RequestParam String figmaFile,
-                                            @RequestParam String figmaFrame,
-                                            @RequestParam(required = false, defaultValue = "DESKTOP") String viewport) {
+            @RequestParam String figmaFile,
+            @RequestParam String figmaFrame,
+            @RequestParam(required = false, defaultValue = "DESKTOP") String viewport,
+            @RequestParam(required = false, defaultValue = "false") boolean semanticOnly) {
 
         Viewport viewportEnum = Viewport.valueOf(viewport.toUpperCase());
-        return orchestrator.compareSemantic(url, figmaFile, figmaFrame, viewportEnum);
+        // If semanticOnly is true, includePixelComparison should be false
+        return orchestrator.compareSemantic(url, figmaFile, figmaFrame, viewportEnum, !semanticOnly);
     }
 }
